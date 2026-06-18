@@ -1,0 +1,1785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NexusCRM — Agent Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#4f7fff',
+            secondary: '#00d4aa',
+            dark: '#0d1117',
+            surface: '#161b2e',
+            'surface-2': '#1e2640'
+          },
+          fontFamily: {
+            inter: ['Inter', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    body { background-color: #0d1117; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #161b2e; }
+    ::-webkit-scrollbar-thumb { background: #2e3a5c; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #4f7fff; }
+
+    /* Glassmorphism */
+    .glass {
+      background: rgba(22, 27, 46, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(79, 127, 255, 0.12);
+    }
+    .glass-card {
+      background: rgba(30, 38, 64, 0.7);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(79, 127, 255, 0.1);
+      transition: border-color 0.3s, box-shadow 0.3s, transform 0.2s;
+    }
+    .glass-card:hover {
+      border-color: rgba(79, 127, 255, 0.3);
+      box-shadow: 0 8px 32px rgba(79, 127, 255, 0.12);
+      transform: translateY(-1px);
+    }
+
+    /* Sidebar */
+    #sidebar {
+      width: 260px;
+      transition: width 0.3s ease, transform 0.3s ease;
+      background: linear-gradient(180deg, #0f1629 0%, #0d1117 100%);
+      border-right: 1px solid rgba(79,127,255,0.1);
+    }
+    #sidebar.collapsed { width: 72px; }
+    #sidebar.collapsed .sidebar-label { display: none; }
+    #sidebar.collapsed .sidebar-logo-text { display: none; }
+    #sidebar.collapsed .agent-info { display: none; }
+    #sidebar.collapsed .sidebar-badge { display: none; }
+    #sidebar.collapsed .nav-item { justify-content: center; padding: 0.75rem; }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.65rem 1rem;
+      border-radius: 0.6rem;
+      cursor: pointer;
+      color: #8896b3;
+      transition: all 0.2s;
+      margin-bottom: 0.2rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      text-decoration: none;
+    }
+    .nav-item:hover {
+      background: rgba(79,127,255,0.1);
+      color: #c5d1f0;
+    }
+    .nav-item.active {
+      background: linear-gradient(135deg, rgba(79,127,255,0.25), rgba(79,127,255,0.1));
+      color: #4f7fff;
+      border: 1px solid rgba(79,127,255,0.25);
+    }
+    .nav-item .nav-icon {
+      width: 20px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    /* Glow effects */
+    .glow-blue { box-shadow: 0 0 20px rgba(79,127,255,0.25); }
+    .glow-teal { box-shadow: 0 0 20px rgba(0,212,170,0.2); }
+    .glow-green { box-shadow: 0 0 20px rgba(34,197,94,0.2); }
+
+    /* Gradient text */
+    .gradient-text {
+      background: linear-gradient(135deg, #4f7fff, #00d4aa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .gradient-text-ai {
+      background: linear-gradient(135deg, #a78bfa, #4f7fff, #00d4aa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Logo glow */
+    .logo-glow {
+      box-shadow: 0 0 20px rgba(79,127,255,0.4), 0 0 40px rgba(79,127,255,0.2);
+    }
+
+    /* Request card */
+    .request-card {
+      background: rgba(30,38,64,0.6);
+      border: 1px solid rgba(79,127,255,0.08);
+      border-radius: 10px;
+      padding: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 8px;
+      position: relative;
+    }
+    .request-card:hover {
+      border-color: rgba(79,127,255,0.3);
+      background: rgba(30,38,64,0.9);
+      transform: translateX(2px);
+    }
+    .request-card.active {
+      border-color: #4f7fff;
+      background: rgba(79,127,255,0.08);
+      box-shadow: 0 0 0 1px rgba(79,127,255,0.3), 0 4px 16px rgba(79,127,255,0.15);
+    }
+
+    /* Priority badges */
+    .badge-urgent { background: rgba(239,68,68,0.2); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+    .badge-high { background: rgba(249,115,22,0.2); color: #fb923c; border: 1px solid rgba(249,115,22,0.3); }
+    .badge-medium { background: rgba(234,179,8,0.2); color: #facc15; border: 1px solid rgba(234,179,8,0.3); }
+    .badge-low { background: rgba(34,197,94,0.2); color: #4ade80; border: 1px solid rgba(34,197,94,0.3); }
+
+    /* Category tags */
+    .tag-technical { background: rgba(79,127,255,0.15); color: #93b4ff; border: 1px solid rgba(79,127,255,0.25); }
+    .tag-billing { background: rgba(168,85,247,0.15); color: #c084fc; border: 1px solid rgba(168,85,247,0.25); }
+    .tag-account { background: rgba(0,212,170,0.15); color: #34d399; border: 1px solid rgba(0,212,170,0.25); }
+    .tag-feature { background: rgba(249,115,22,0.15); color: #fdba74; border: 1px solid rgba(249,115,22,0.25); }
+
+    /* Avatar gradients */
+    .avatar-1 { background: linear-gradient(135deg, #667eea, #764ba2); }
+    .avatar-2 { background: linear-gradient(135deg, #f093fb, #f5576c); }
+    .avatar-3 { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+    .avatar-4 { background: linear-gradient(135deg, #43e97b, #38f9d7); }
+    .avatar-5 { background: linear-gradient(135deg, #fa709a, #fee140); }
+    .avatar-6 { background: linear-gradient(135deg, #a18cd1, #fbc2eb); }
+    .avatar-7 { background: linear-gradient(135deg, #ffecd2, #fcb69f); }
+    .avatar-8 { background: linear-gradient(135deg, #a1c4fd, #c2e9fb); }
+
+    /* AI Draft Studio */
+    .ai-panel {
+      background: linear-gradient(135deg, rgba(15,20,40,0.95), rgba(22,27,46,0.95));
+      border: 1px solid rgba(79,127,255,0.15);
+    }
+
+    /* Typing cursor */
+    .typing-cursor {
+      display: inline-block;
+      width: 2px;
+      height: 1em;
+      background: #4f7fff;
+      animation: blink 1s step-end infinite;
+      vertical-align: text-bottom;
+      margin-left: 1px;
+    }
+    @keyframes blink {
+      from, to { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    /* AI step animation */
+    .ai-step {
+      opacity: 0;
+      transform: translateX(-10px);
+      transition: all 0.4s ease;
+    }
+    .ai-step.visible {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    /* Progress bar animation */
+    @keyframes progress-fill {
+      from { width: 0%; }
+      to { width: 100%; }
+    }
+    .progress-animated {
+      animation: progress-fill 3s ease-out forwards;
+    }
+
+    /* Circular progress */
+    .circular-progress {
+      position: relative;
+      width: 64px;
+      height: 64px;
+    }
+    .circular-progress svg {
+      transform: rotate(-90deg);
+    }
+    .circular-progress .progress-ring__circle {
+      transition: stroke-dashoffset 1s ease;
+    }
+
+    /* Toast notification */
+    .toast {
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      z-index: 9999;
+      background: rgba(22,27,46,0.95);
+      border: 1px solid rgba(0,212,170,0.4);
+      border-radius: 12px;
+      padding: 16px 20px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 20px rgba(0,212,170,0.15);
+      transform: translateX(120%);
+      transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      min-width: 300px;
+    }
+    .toast.show { transform: translateX(0); }
+
+    /* Notification dropdown */
+    .notif-dropdown {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      width: 340px;
+      background: #161b2e;
+      border: 1px solid rgba(79,127,255,0.2);
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      z-index: 1000;
+      display: none;
+    }
+    .notif-dropdown.open { display: block; }
+
+    /* Stat card glow on hover */
+    .stat-card {
+      background: linear-gradient(135deg, rgba(22,27,46,0.9), rgba(30,38,64,0.9));
+      border: 1px solid rgba(79,127,255,0.1);
+      border-radius: 14px;
+      transition: all 0.3s;
+    }
+    .stat-card:hover { box-shadow: 0 8px 30px rgba(79,127,255,0.15); transform: translateY(-2px); }
+
+    /* Filter tab */
+    .filter-tab {
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid rgba(79,127,255,0.15);
+      color: #8896b3;
+    }
+    .filter-tab.active {
+      background: rgba(79,127,255,0.2);
+      color: #4f7fff;
+      border-color: rgba(79,127,255,0.4);
+    }
+    .filter-tab:hover:not(.active) { background: rgba(79,127,255,0.08); color: #c5d1f0; }
+
+    /* Online dot pulse */
+    .online-dot {
+      width: 8px;
+      height: 8px;
+      background: #22c55e;
+      border-radius: 50%;
+      animation: pulse-green 2s infinite;
+    }
+    @keyframes pulse-green {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0.4); }
+      50% { box-shadow: 0 0 0 5px rgba(34,197,94,0); }
+    }
+
+    /* Kanban */
+    .kanban-column {
+      background: rgba(22,27,46,0.6);
+      border: 1px solid rgba(79,127,255,0.1);
+      border-radius: 12px;
+      min-height: 300px;
+    }
+    .kanban-card {
+      background: rgba(30,38,64,0.8);
+      border: 1px solid rgba(79,127,255,0.1);
+      border-radius: 8px;
+      padding: 10px 12px;
+      cursor: grab;
+      margin-bottom: 8px;
+      transition: all 0.2s;
+      user-select: none;
+    }
+    .kanban-card:hover { border-color: rgba(79,127,255,0.3); transform: scale(1.01); }
+    .kanban-card.dragging { opacity: 0.4; transform: scale(0.98); cursor: grabbing; }
+    .kanban-column.drag-over { border-color: rgba(79,127,255,0.5); background: rgba(79,127,255,0.06); }
+
+    /* Shimmer */
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    .shimmer {
+      background: linear-gradient(90deg, transparent 25%, rgba(79,127,255,0.08) 50%, transparent 75%);
+      background-size: 200% 100%;
+      animation: shimmer 2s infinite;
+    }
+
+    /* AI orb */
+    @keyframes orb-rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    @keyframes orb-pulse {
+      0%, 100% { transform: scale(1); opacity: 0.8; }
+      50% { transform: scale(1.05); opacity: 1; }
+    }
+    .ai-orb-ring {
+      border: 2px solid transparent;
+      border-top-color: #4f7fff;
+      border-right-color: #00d4aa;
+      border-radius: 50%;
+      animation: orb-rotate 3s linear infinite;
+    }
+    .ai-orb-inner { animation: orb-pulse 2s ease-in-out infinite; }
+
+    /* Action button */
+    .action-btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-approve { background: linear-gradient(135deg, #00d4aa, #00b894); color: #fff; }
+    .btn-approve:hover { box-shadow: 0 4px 15px rgba(0,212,170,0.4); transform: translateY(-1px); }
+    .btn-edit { background: rgba(79,127,255,0.2); color: #4f7fff; border: 1px solid rgba(79,127,255,0.3); }
+    .btn-edit:hover { background: rgba(79,127,255,0.3); }
+    .btn-regen { background: rgba(100,116,139,0.2); color: #94a3b8; border: 1px solid rgba(100,116,139,0.3); }
+    .btn-regen:hover { background: rgba(100,116,139,0.35); }
+    .btn-template { background: transparent; color: #8896b3; border: 1px solid rgba(79,127,255,0.2); }
+    .btn-template:hover { border-color: rgba(79,127,255,0.4); color: #c5d1f0; }
+
+    /* Empty state animation */
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-12px); }
+    }
+    .float-anim { animation: float 3s ease-in-out infinite; }
+
+    /* Chart containers */
+    .chart-container { position: relative; }
+
+    /* Mobile sidebar */
+    @media (max-width: 1024px) {
+      #sidebar {
+        position: fixed;
+        left: -260px;
+        height: 100vh;
+        z-index: 100;
+      }
+      #sidebar.mobile-open { left: 0; }
+      #main-wrapper { margin-left: 0 !important; }
+    }
+
+    /* SLA status */
+    .sla-ok { color: #4ade80; }
+    .sla-warn { color: #facc15; }
+    .sla-breach { color: #f87171; }
+
+    /* Draft textarea */
+    #draftTextarea {
+      background: rgba(13,17,23,0.6);
+      border: 1px solid rgba(79,127,255,0.15);
+      border-radius: 10px;
+      color: #c5d1f0;
+      font-size: 0.82rem;
+      line-height: 1.7;
+      resize: vertical;
+      transition: border-color 0.3s;
+      font-family: 'Inter', sans-serif;
+    }
+    #draftTextarea:focus { outline: none; border-color: rgba(79,127,255,0.5); }
+    #draftTextarea:read-only { cursor: default; }
+
+    /* Conversation history */
+    .conv-bubble-agent {
+      background: rgba(79,127,255,0.12);
+      border: 1px solid rgba(79,127,255,0.2);
+      border-radius: 12px 12px 4px 12px;
+      padding: 10px 14px;
+      margin-left: auto;
+      max-width: 85%;
+      color: #b8caf5;
+      font-size: 0.8rem;
+    }
+    .conv-bubble-customer {
+      background: rgba(30,38,64,0.9);
+      border: 1px solid rgba(79,127,255,0.1);
+      border-radius: 12px 12px 12px 4px;
+      padding: 10px 14px;
+      max-width: 85%;
+      color: #8896b3;
+      font-size: 0.8rem;
+    }
+
+    /* Skeleton placeholder */
+    .skeleton {
+      background: linear-gradient(90deg, rgba(30,38,64,0.6) 25%, rgba(79,127,255,0.05) 50%, rgba(30,38,64,0.6) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 6px;
+    }
+
+    /* Main layout transition */
+    #main-wrapper {
+      transition: margin-left 0.3s ease;
+    }
+  </style>
+</head>
+<body class="bg-dark text-white min-h-screen overflow-hidden">
+
+<!-- Toast Notification -->
+<div id="toast" class="toast">
+  <div class="flex items-start gap-3">
+    <div class="w-8 h-8 rounded-full bg-secondary/20 flex items-center justify-center flex-shrink-0">
+      <i class="fas fa-check text-secondary text-sm"></i>
+    </div>
+    <div>
+      <p class="font-semibold text-white text-sm" id="toastTitle">Response Sent!</p>
+      <p class="text-xs text-gray-400 mt-0.5" id="toastMsg">Email successfully delivered to customer.</p>
+    </div>
+    <button onclick="hideToast()" class="ml-auto text-gray-500 hover:text-white transition-colors">
+      <i class="fas fa-times text-xs"></i>
+    </button>
+  </div>
+</div>
+
+<div class="flex h-screen overflow-hidden">
+
+  <!-- LEFT SIDEBAR -->
+  <aside id="sidebar" class="flex-shrink-0 h-screen flex flex-col z-50 overflow-hidden">
+    <!-- Logo -->
+    <div class="flex items-center gap-3 px-4 py-5 border-b border-white/5">
+      <div class="w-9 h-9 rounded-xl logo-glow flex items-center justify-center flex-shrink-0" style="background:linear-gradient(135deg,#4f7fff,#00d4aa)">
+        <i class="fas fa-bolt text-white text-sm"></i>
+      </div>
+      <div class="sidebar-logo-text">
+        <span class="font-bold text-base gradient-text">NexusCRM</span>
+        <span class="block text-[10px] text-gray-500 font-medium -mt-0.5">Enterprise Suite</span>
+      </div>
+      <button id="sidebarToggle" class="ml-auto text-gray-600 hover:text-primary transition-colors lg:hidden" onclick="toggleSidebar()">
+        <i class="fas fa-bars text-sm"></i>
+      </button>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="flex-1 px-3 py-4 overflow-y-auto">
+      <p class="text-[10px] font-semibold text-gray-600 uppercase tracking-widest mb-3 px-2 sidebar-label">Main Menu</p>
+
+      <a href="dashboard.html" class="nav-item active">
+        <span class="nav-icon"><i class="fas fa-grip-vertical text-sm"></i></span>
+        <span class="sidebar-label">Dashboard</span>
+      </a>
+      <a href="#" class="nav-item" onclick="showToastMsg('Inbox', 'Opening your inbox...')">
+        <span class="nav-icon"><i class="fas fa-inbox text-sm"></i></span>
+        <span class="sidebar-label">Inbox</span>
+        <span class="sidebar-badge ml-auto bg-primary/20 text-primary text-[10px] font-bold px-2 py-0.5 rounded-full">12</span>
+      </a>
+      <a href="#" class="nav-item" onclick="scrollToAIPanel()">
+        <span class="nav-icon"><i class="fas fa-wand-magic-sparkles text-sm"></i></span>
+        <span class="sidebar-label">AI Draft Studio</span>
+        <span class="sidebar-badge ml-auto bg-secondary/20 text-secondary text-[10px] font-bold px-1 py-0.5 rounded-full">AI</span>
+      </a>
+      <a href="#" class="nav-item">
+        <span class="nav-icon"><i class="fas fa-chart-line text-sm"></i></span>
+        <span class="sidebar-label">Analytics</span>
+      </a>
+      <a href="#" class="nav-item">
+        <span class="nav-icon"><i class="fas fa-users text-sm"></i></span>
+        <span class="sidebar-label">Customers</span>
+      </a>
+
+      <p class="text-[10px] font-semibold text-gray-600 uppercase tracking-widest mb-3 mt-5 px-2 sidebar-label">System</p>
+      <a href="#" class="nav-item">
+        <span class="nav-icon"><i class="fas fa-cog text-sm"></i></span>
+        <span class="sidebar-label">Settings</span>
+      </a>
+      <a href="index.html" class="nav-item">
+        <span class="nav-icon"><i class="fas fa-home text-sm"></i></span>
+        <span class="sidebar-label">Home</span>
+      </a>
+    </nav>
+
+    <!-- Agent Profile -->
+    <div class="px-3 py-4 border-t border-white/5">
+      <div class="flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 transition-colors cursor-pointer">
+        <div class="relative flex-shrink-0">
+          <div class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm" style="background:linear-gradient(135deg,#4f7fff,#7c3aed)">AJ</div>
+          <span class="online-dot absolute -bottom-0.5 -right-0.5 border-2 border-dark rounded-full"></span>
+        </div>
+        <div class="agent-info min-w-0">
+          <p class="font-semibold text-white text-sm leading-tight truncate">Alex Johnson</p>
+          <p class="text-[11px] text-gray-500 truncate">Support Agent</p>
+        </div>
+        <a href="login.html" class="agent-info ml-auto text-gray-600 hover:text-red-400 transition-colors" title="Logout">
+          <i class="fas fa-right-from-bracket text-sm"></i>
+        </a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN WRAPPER -->
+  <div id="main-wrapper" class="flex-1 flex flex-col overflow-hidden" style="margin-left:0;">
+
+    <!-- TOP HEADER -->
+    <header class="glass border-b border-white/5 px-6 py-3 flex items-center gap-4 flex-shrink-0 z-40">
+      <!-- Hamburger (desktop collapse) -->
+      <button onclick="toggleSidebarDesktop()" class="text-gray-500 hover:text-primary transition-colors flex-shrink-0">
+        <i class="fas fa-bars text-sm"></i>
+      </button>
+
+      <!-- Greeting -->
+      <div class="hidden md:block">
+        <h1 class="text-sm font-semibold text-white">Good Morning, Alex 👋</h1>
+        <p class="text-[11px] text-gray-500">Thursday, June 18, 2026</p>
+      </div>
+
+      <!-- Search -->
+      <div class="flex-1 max-w-md mx-4">
+        <div class="relative">
+          <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs"></i>
+          <input type="text" placeholder="Search requests, customers..." class="w-full bg-surface-2/60 border border-white/8 rounded-xl pl-9 pr-4 py-2 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-primary/40 transition-colors"/>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3 ml-auto flex-shrink-0">
+        <!-- Notification Bell -->
+        <div class="relative" id="notifWrapper">
+          <button onclick="toggleNotifications()" class="relative w-9 h-9 rounded-xl bg-surface-2/60 border border-white/8 flex items-center justify-center text-gray-400 hover:text-white hover:border-primary/30 transition-all">
+            <i class="fas fa-bell text-sm"></i>
+            <span class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] font-bold flex items-center justify-center text-white">5</span>
+          </button>
+          <!-- Notification Dropdown -->
+          <div id="notifDropdown" class="notif-dropdown">
+            <div class="px-4 py-3 border-b border-white/8 flex items-center justify-between">
+              <span class="font-semibold text-white text-sm">Notifications</span>
+              <span class="text-[11px] text-primary cursor-pointer hover:underline">Mark all read</span>
+            </div>
+            <div class="overflow-y-auto max-h-72">
+              <div id="notifList"></div>
+            </div>
+            <div class="px-4 py-2 border-t border-white/8 text-center">
+              <span class="text-xs text-primary cursor-pointer hover:underline">View all notifications</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- New Response Button -->
+        <button onclick="showToastMsg('New Response', 'Opening new response composer...')" class="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all hover:shadow-lg hover:-translate-y-0.5" style="background:linear-gradient(135deg,#4f7fff,#00d4aa);box-shadow:0 4px 15px rgba(79,127,255,0.3)">
+          <i class="fas fa-plus text-xs"></i>
+          New Response
+        </button>
+
+        <!-- Agent Avatar -->
+        <div class="relative cursor-pointer group">
+          <div class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm" style="background:linear-gradient(135deg,#4f7fff,#7c3aed)">AJ</div>
+          <span class="online-dot absolute -bottom-0.5 -right-0.5 border-2 border-dark rounded-full"></span>
+        </div>
+      </div>
+    </header>
+
+    <!-- MAIN CONTENT SCROLL -->
+    <main class="flex-1 overflow-y-auto p-4 lg:p-5 space-y-5" id="mainScroll">
+
+      <!-- STATS ROW -->
+      <div class="grid grid-cols-2 xl:grid-cols-4 gap-4">
+        <!-- Stat 1: Open Requests -->
+        <div class="stat-card p-4">
+          <div class="flex items-start justify-between mb-3">
+            <div class="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center">
+              <i class="fas fa-folder-open text-primary text-base"></i>
+            </div>
+            <span class="text-xs font-medium text-orange-400 flex items-center gap-1">
+              <i class="fas fa-arrow-up text-[10px]"></i>+8%
+            </span>
+          </div>
+          <p class="text-3xl font-black text-white mb-0.5">47</p>
+          <p class="text-xs text-gray-500 font-medium">Open Requests</p>
+          <div class="mt-3 h-1 bg-white/5 rounded-full overflow-hidden">
+            <div class="h-full bg-primary/60 rounded-full" style="width:72%"></div>
+          </div>
+        </div>
+
+        <!-- Stat 2: Resolved Today -->
+        <div class="stat-card p-4">
+          <div class="flex items-start justify-between mb-3">
+            <div class="w-10 h-10 rounded-xl bg-green-500/15 flex items-center justify-center">
+              <i class="fas fa-circle-check text-green-400 text-base"></i>
+            </div>
+            <span class="text-xs font-medium text-green-400 flex items-center gap-1">
+              <i class="fas fa-arrow-up text-[10px]"></i>+15%
+            </span>
+          </div>
+          <p class="text-3xl font-black text-white mb-0.5">23</p>
+          <p class="text-xs text-gray-500 font-medium">Resolved Today</p>
+          <div class="mt-3 h-1 bg-white/5 rounded-full overflow-hidden">
+            <div class="h-full bg-green-500/60 rounded-full" style="width:60%"></div>
+          </div>
+        </div>
+
+        <!-- Stat 3: Avg Response Time -->
+        <div class="stat-card p-4">
+          <div class="flex items-start justify-between mb-3">
+            <div class="w-10 h-10 rounded-xl bg-secondary/15 flex items-center justify-center">
+              <i class="fas fa-clock text-secondary text-base"></i>
+            </div>
+            <span class="text-xs font-medium text-secondary flex items-center gap-1">
+              <i class="fas fa-arrow-down text-[10px]"></i>-12%
+            </span>
+          </div>
+          <p class="text-3xl font-black text-secondary mb-0.5">4.2<span class="text-sm font-medium ml-1 text-gray-400">min</span></p>
+          <p class="text-xs text-gray-500 font-medium">Avg Response Time</p>
+          <div class="mt-3 h-1 bg-white/5 rounded-full overflow-hidden">
+            <div class="h-full bg-secondary/60 rounded-full" style="width:35%"></div>
+          </div>
+        </div>
+
+        <!-- Stat 4: AI Drafts Used -->
+        <div class="stat-card p-4">
+          <div class="flex items-start justify-between mb-3">
+            <div class="w-10 h-10 rounded-xl bg-purple-500/15 flex items-center justify-center">
+              <i class="fas fa-wand-magic-sparkles text-purple-400 text-base"></i>
+            </div>
+            <span class="text-xs font-medium text-purple-400 flex items-center gap-1">
+              <i class="fas fa-arrow-up text-[10px]"></i>+24%
+            </span>
+          </div>
+          <p class="text-3xl font-black text-white mb-0.5">89<span class="text-sm font-medium text-gray-400">%</span></p>
+          <p class="text-xs text-gray-500 font-medium">AI Drafts Used</p>
+          <div class="mt-3 h-2 bg-white/5 rounded-full overflow-hidden">
+            <div class="h-full rounded-full" style="width:89%;background:linear-gradient(90deg,#4f7fff,#a78bfa)"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW TOGGLE TABS -->
+      <div class="flex items-center gap-3">
+        <button id="tabList" onclick="switchView('list')" class="filter-tab active">
+          <i class="fas fa-list-ul mr-1.5 text-[10px]"></i>List View
+        </button>
+        <button id="tabKanban" onclick="switchView('kanban')" class="filter-tab">
+          <i class="fas fa-columns mr-1.5 text-[10px]"></i>Kanban View
+        </button>
+        <div class="ml-auto text-xs text-gray-600">
+          <i class="fas fa-info-circle mr-1"></i>
+          <span id="requestCount">8 requests</span>
+        </div>
+      </div>
+
+      <!-- LIST VIEW PANELS -->
+      <div id="listView" class="grid grid-cols-1 lg:grid-cols-3 gap-4" style="min-height:500px;">
+
+        <!-- PANEL 1: REQUEST INBOX -->
+        <div class="lg:col-span-1 glass-card rounded-2xl flex flex-col overflow-hidden" style="max-height:68vh;">
+          <div class="px-4 py-3 border-b border-white/5 flex-shrink-0">
+            <div class="flex items-center justify-between mb-3">
+              <h2 class="font-bold text-white text-sm flex items-center gap-2">
+                <i class="fas fa-inbox text-primary text-xs"></i>
+                Service Requests
+              </h2>
+              <div class="flex gap-2">
+                <button class="w-7 h-7 rounded-lg bg-surface-2/60 border border-white/8 flex items-center justify-center text-gray-500 hover:text-white transition-colors text-xs">
+                  <i class="fas fa-filter"></i>
+                </button>
+                <button class="w-7 h-7 rounded-lg bg-surface-2/60 border border-white/8 flex items-center justify-center text-gray-500 hover:text-white transition-colors text-xs">
+                  <i class="fas fa-sort"></i>
+                </button>
+              </div>
+            </div>
+            <!-- Filter Tabs -->
+            <div class="flex gap-1.5 flex-wrap">
+              <button class="filter-tab active" onclick="filterRequests('all', this)">All</button>
+              <button class="filter-tab" onclick="filterRequests('open', this)">Open</button>
+              <button class="filter-tab" onclick="filterRequests('in-progress', this)">In Progress</button>
+              <button class="filter-tab" onclick="filterRequests('urgent', this)">Urgent</button>
+            </div>
+          </div>
+          <div id="requestList" class="flex-1 overflow-y-auto px-3 py-3 space-y-2">
+            <!-- JS rendered -->
+          </div>
+        </div>
+
+        <!-- PANEL 2: REQUEST DETAIL -->
+        <div class="lg:col-span-1 glass-card rounded-2xl flex flex-col overflow-hidden" style="max-height:68vh;">
+          <div class="px-4 py-3 border-b border-white/5 flex-shrink-0 flex items-center justify-between">
+            <h2 class="font-bold text-white text-sm flex items-center gap-2">
+              <i class="fas fa-file-lines text-secondary text-xs"></i>
+              Request Detail
+            </h2>
+            <span id="reqIdBadge" class="text-[11px] text-gray-500 font-mono"></span>
+          </div>
+          <div id="requestDetail" class="flex-1 overflow-y-auto px-4 py-4">
+            <!-- Empty State -->
+            <div id="emptyDetail" class="h-full flex flex-col items-center justify-center text-center gap-4">
+              <div class="float-anim">
+                <div class="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-1">
+                  <i class="fas fa-file-lines text-primary text-2xl"></i>
+                </div>
+              </div>
+              <div>
+                <p class="font-semibold text-gray-400 text-sm">No Request Selected</p>
+                <p class="text-xs text-gray-600 mt-1">Click on a request from the inbox to view its details here.</p>
+              </div>
+            </div>
+            <!-- Detail content injected by JS -->
+          </div>
+        </div>
+
+        <!-- PANEL 3: AI DRAFT STUDIO -->
+        <div class="lg:col-span-1 ai-panel rounded-2xl flex flex-col overflow-hidden" style="max-height:68vh;">
+          <div class="px-4 py-3 border-b border-white/8 flex-shrink-0">
+            <div class="flex items-center justify-between">
+              <h2 class="font-bold text-white text-sm flex items-center gap-2">
+                <i class="fas fa-wand-magic-sparkles text-[11px]" style="color:#a78bfa"></i>
+                AI Draft Studio
+              </h2>
+              <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full border flex items-center gap-1" style="background:rgba(167,139,250,0.12);border-color:rgba(167,139,250,0.3);color:#a78bfa">
+                <i class="fas fa-microchip text-[9px]"></i>Powered by NexusAI
+              </span>
+            </div>
+          </div>
+
+          <div class="flex-1 overflow-y-auto px-4 py-4 flex flex-col">
+
+            <!-- AI Empty State -->
+            <div id="aiEmptyState" class="flex-1 flex flex-col items-center justify-center text-center gap-4">
+              <div class="relative">
+                <div class="w-20 h-20 rounded-full flex items-center justify-center ai-orb-inner" style="background:radial-gradient(circle,rgba(79,127,255,0.2),rgba(0,212,170,0.1))">
+                  <div class="absolute inset-0 rounded-full ai-orb-ring" style="width:80px;height:80px;"></div>
+                  <i class="fas fa-robot text-2xl gradient-text-ai relative z-10"></i>
+                </div>
+              </div>
+              <div>
+                <p class="font-semibold gradient-text-ai text-sm">NexusAI Ready</p>
+                <p class="text-xs text-gray-600 mt-1 leading-relaxed">Select a request and click<br/><span class="text-primary font-medium">'Generate AI Draft'</span> to begin</p>
+              </div>
+              <div class="flex gap-2 flex-wrap justify-center">
+                <span class="text-[10px] px-2 py-1 rounded-full bg-primary/10 text-primary border border-primary/20">⚡ Instant Draft</span>
+                <span class="text-[10px] px-2 py-1 rounded-full bg-secondary/10 text-secondary border border-secondary/20">🎯 94% Accuracy</span>
+                <span class="text-[10px] px-2 py-1 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20">🧠 Context Aware</span>
+              </div>
+            </div>
+
+            <!-- AI Working State -->
+            <div id="aiWorkingState" class="hidden flex-col gap-3">
+              <div class="text-center mb-2">
+                <div class="relative inline-block">
+                  <div class="w-12 h-12 rounded-full flex items-center justify-center mx-auto ai-orb-inner" style="background:radial-gradient(circle,rgba(79,127,255,0.2),rgba(0,212,170,0.1))">
+                    <div class="absolute inset-0 rounded-full ai-orb-ring" style="width:48px;height:48px;"></div>
+                    <i class="fas fa-robot text-base gradient-text-ai relative z-10"></i>
+                  </div>
+                </div>
+                <p class="text-xs font-semibold text-white mt-2">NexusAI is working...</p>
+              </div>
+
+              <!-- Progress bar -->
+              <div class="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                <div id="aiProgressBar" class="h-full rounded-full" style="background:linear-gradient(90deg,#4f7fff,#00d4aa);width:0%;transition:width 0.3s;"></div>
+              </div>
+
+              <!-- Steps -->
+              <div class="space-y-2">
+                <div id="step1" class="ai-step flex items-center gap-2.5 text-xs p-2.5 rounded-lg bg-white/3 border border-white/5">
+                  <div class="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-magnifying-glass text-primary text-[10px]"></i>
+                  </div>
+                  <span class="text-gray-400" id="step1Text">Analyzing request...</span>
+                  <i class="fas fa-check text-green-400 ml-auto text-[10px] hidden" id="step1Check"></i>
+                </div>
+                <div id="step2" class="ai-step flex items-center gap-2.5 text-xs p-2.5 rounded-lg bg-white/3 border border-white/5">
+                  <div class="w-5 h-5 rounded-full bg-secondary/20 flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-history text-secondary text-[10px]"></i>
+                  </div>
+                  <span class="text-gray-400" id="step2Text">Checking previous interactions...</span>
+                  <i class="fas fa-check text-green-400 ml-auto text-[10px] hidden" id="step2Check"></i>
+                </div>
+                <div id="step3" class="ai-step flex items-center gap-2.5 text-xs p-2.5 rounded-lg bg-white/3 border border-white/5">
+                  <div class="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-pen-nib text-purple-400 text-[10px]"></i>
+                  </div>
+                  <span class="text-gray-400" id="step3Text">Drafting response...</span>
+                  <i class="fas fa-check text-green-400 ml-auto text-[10px] hidden" id="step3Check"></i>
+                </div>
+              </div>
+            </div>
+
+            <!-- AI Draft Result -->
+            <div id="aiDraftResult" class="hidden flex-col gap-3 flex-1">
+              <!-- Confidence + Stats -->
+              <div class="flex items-center justify-between p-3 rounded-xl border" style="background:rgba(79,127,255,0.06);border-color:rgba(79,127,255,0.15)">
+                <div class="flex items-center gap-3">
+                  <!-- Circular progress -->
+                  <div class="circular-progress">
+                    <svg width="52" height="52" viewBox="0 0 52 52">
+                      <circle cx="26" cy="26" r="21" fill="none" stroke="rgba(79,127,255,0.15)" stroke-width="4"/>
+                      <circle class="progress-ring__circle" id="confidenceCircle" cx="26" cy="26" r="21" fill="none" stroke="url(#grad1)" stroke-width="4" stroke-linecap="round" stroke-dasharray="131.95" stroke-dashoffset="131.95"/>
+                      <defs>
+                        <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" style="stop-color:#4f7fff"/>
+                          <stop offset="100%" style="stop-color:#00d4aa"/>
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;">
+                      <span class="text-[11px] font-black text-white">94%</span>
+                    </div>
+                  </div>
+                  <div>
+                    <p class="text-xs font-semibold text-white">Confidence Score</p>
+                    <p class="text-[10px] text-gray-500 mt-0.5">Based on 127 similar past interactions</p>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <p class="text-[10px] text-gray-500">Tone</p>
+                  <span class="text-[10px] px-1.5 py-0.5 rounded bg-secondary/15 text-secondary border border-secondary/25 font-medium">Professional</span>
+                </div>
+              </div>
+
+              <!-- Draft label -->
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-white flex items-center gap-1.5">
+                  <i class="fas fa-envelope text-primary text-[10px]"></i>
+                  Draft Email
+                </span>
+                <span class="text-[10px] text-gray-600">Editable</span>
+              </div>
+
+              <!-- Draft Textarea -->
+              <div class="flex-1 relative">
+                <textarea id="draftTextarea" readonly class="w-full h-44 p-3 text-sm" style="min-height:160px;"></textarea>
+                <span id="typingCursor" class="typing-cursor" style="display:none;position:absolute;bottom:10px;left:10px;"></span>
+              </div>
+
+              <!-- Action Buttons -->
+              <div id="draftActions" class="hidden grid grid-cols-2 gap-2">
+                <button onclick="approveAndSend()" class="action-btn btn-approve col-span-2 justify-center">
+                  <i class="fas fa-paper-plane text-xs"></i> Approve &amp; Send
+                </button>
+                <button onclick="editDraft()" class="action-btn btn-edit justify-center">
+                  <i class="fas fa-pen text-xs"></i> Edit Draft
+                </button>
+                <button onclick="regenerateDraft()" class="action-btn btn-regen justify-center">
+                  <i class="fas fa-rotate text-xs"></i> Regenerate
+                </button>
+                <button onclick="showToastMsg('Template Saved', 'Draft saved as a reusable template.')" class="action-btn btn-template justify-center col-span-2">
+                  <i class="fas fa-bookmark text-xs"></i> Save as Template
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- KANBAN VIEW -->
+      <div id="kanbanView" class="hidden">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Open Column -->
+          <div class="kanban-column p-3" id="kanban-open" ondragover="kanbanDragOver(event)" ondrop="kanbanDrop(event,'open')">
+            <div class="flex items-center gap-2 mb-3 px-1">
+              <span class="w-2.5 h-2.5 rounded-full bg-blue-400"></span>
+              <span class="font-semibold text-sm text-white">Open</span>
+              <span class="ml-auto text-xs bg-blue-400/20 text-blue-400 px-2 py-0.5 rounded-full" id="kanban-open-count">6</span>
+            </div>
+            <div id="kanban-open-cards"></div>
+          </div>
+          <!-- In Progress Column -->
+          <div class="kanban-column p-3" id="kanban-inprogress" ondragover="kanbanDragOver(event)" ondrop="kanbanDrop(event,'in-progress')">
+            <div class="flex items-center gap-2 mb-3 px-1">
+              <span class="w-2.5 h-2.5 rounded-full bg-yellow-400"></span>
+              <span class="font-semibold text-sm text-white">In Progress</span>
+              <span class="ml-auto text-xs bg-yellow-400/20 text-yellow-400 px-2 py-0.5 rounded-full" id="kanban-inprogress-count">2</span>
+            </div>
+            <div id="kanban-inprogress-cards"></div>
+          </div>
+          <!-- Resolved Column -->
+          <div class="kanban-column p-3" id="kanban-resolved" ondragover="kanbanDragOver(event)" ondrop="kanbanDrop(event,'resolved')">
+            <div class="flex items-center gap-2 mb-3 px-1">
+              <span class="w-2.5 h-2.5 rounded-full bg-green-400"></span>
+              <span class="font-semibold text-sm text-white">Resolved</span>
+              <span class="ml-auto text-xs bg-green-400/20 text-green-400 px-2 py-0.5 rounded-full" id="kanban-resolved-count">0</span>
+            </div>
+            <div id="kanban-resolved-cards"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ANALYTICS ROW -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+
+        <!-- Line Chart -->
+        <div class="md:col-span-1 glass-card rounded-2xl p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-bold text-white text-sm">Request Volume</h3>
+            <span class="text-[10px] text-gray-500 bg-surface-2/60 px-2 py-0.5 rounded-full border border-white/8">This Week</span>
+          </div>
+          <div class="chart-container" style="height:150px;">
+            <canvas id="volumeChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Doughnut Chart -->
+        <div class="glass-card rounded-2xl p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-bold text-white text-sm">By Category</h3>
+            <span class="text-[10px] text-gray-500 bg-surface-2/60 px-2 py-0.5 rounded-full border border-white/8">Today</span>
+          </div>
+          <div class="flex items-center gap-4">
+            <div class="chart-container flex-shrink-0" style="height:130px;width:130px;">
+              <canvas id="categoryChart"></canvas>
+            </div>
+            <div class="space-y-2 flex-1">
+              <div class="flex items-center gap-2 text-xs">
+                <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:#4f7fff"></span>
+                <span class="text-gray-400">Technical</span>
+                <span class="ml-auto text-white font-medium">38%</span>
+              </div>
+              <div class="flex items-center gap-2 text-xs">
+                <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:#a78bfa"></span>
+                <span class="text-gray-400">Billing</span>
+                <span class="ml-auto text-white font-medium">27%</span>
+              </div>
+              <div class="flex items-center gap-2 text-xs">
+                <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:#00d4aa"></span>
+                <span class="text-gray-400">Account</span>
+                <span class="ml-auto text-white font-medium">21%</span>
+              </div>
+              <div class="flex items-center gap-2 text-xs">
+                <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:#fb923c"></span>
+                <span class="text-gray-400">Feature</span>
+                <span class="ml-auto text-white font-medium">14%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI Draft Performance -->
+        <div class="glass-card rounded-2xl p-4">
+          <div class="flex items-center gap-2 mb-4">
+            <i class="fas fa-wand-magic-sparkles text-purple-400 text-xs"></i>
+            <h3 class="font-bold text-white text-sm">AI Draft Performance</h3>
+          </div>
+          <div class="space-y-4">
+            <div class="flex items-center justify-between p-3 rounded-xl" style="background:rgba(79,127,255,0.07);border:1px solid rgba(79,127,255,0.12)">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-primary/15 flex items-center justify-center">
+                  <i class="fas fa-robot text-primary text-xs"></i>
+                </div>
+                <span class="text-xs text-gray-400">Drafts Generated</span>
+              </div>
+              <span class="text-lg font-black text-white">42</span>
+            </div>
+            <div class="flex items-center justify-between p-3 rounded-xl" style="background:rgba(0,212,170,0.07);border:1px solid rgba(0,212,170,0.12)">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-secondary/15 flex items-center justify-center">
+                  <i class="fas fa-thumbs-up text-secondary text-xs"></i>
+                </div>
+                <span class="text-xs text-gray-400">Approval Rate</span>
+              </div>
+              <span class="text-lg font-black text-secondary">89%</span>
+            </div>
+            <div class="flex items-center justify-between p-3 rounded-xl" style="background:rgba(167,139,250,0.07);border:1px solid rgba(167,139,250,0.12)">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-purple-500/15 flex items-center justify-center">
+                  <i class="fas fa-clock text-purple-400 text-xs"></i>
+                </div>
+                <span class="text-xs text-gray-400">Time Saved</span>
+              </div>
+              <span class="text-lg font-black text-purple-400">3.2<span class="text-xs font-medium ml-1 text-gray-500">hrs</span></span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+  </div><!-- end main-wrapper -->
+</div><!-- end flex wrapper -->
+
+<script>
+// ============================================================
+// DATA
+// ============================================================
+const requests = [
+  { id: 'REQ-001', customerName: 'Sarah Mitchell', company: 'TechCorp Inc', email: 'sarah@techcorp.com', subject: 'Unable to reset my account password', message: 'Hi, I have been trying to reset my password for the past 2 hours but I keep getting an error saying the reset link has expired. I tried 3 times already. This is urgent as I have a presentation tomorrow and need access to my files stored in your system. Please help ASAP.', priority: 'urgent', category: 'technical', time: '2 min ago', status: 'open', prevRequests: 3, accountType: 'Enterprise', sla: 'At Risk' },
+  { id: 'REQ-002', customerName: 'James Rodriguez', company: 'DataFlow LLC', email: 'james@dataflow.com', subject: 'Billing discrepancy in November invoice', message: 'Hello, I noticed that my November invoice shows a charge of $450 for the Enterprise plan but we downgraded to Professional plan in October. The Professional plan should be $199/month. Please review and issue a credit note for the difference.', priority: 'high', category: 'billing', time: '15 min ago', status: 'open', prevRequests: 7, accountType: 'Professional', sla: 'Within SLA' },
+  { id: 'REQ-003', customerName: 'Priya Sharma', company: 'CloudBase Solutions', email: 'priya@cloudbase.com', subject: 'API integration not working after update', message: 'After the latest update pushed yesterday, our API integration has completely stopped working. We are getting 401 unauthorized errors on all API calls even though our API key has not changed. This is blocking our production deployment.', priority: 'urgent', category: 'technical', time: '28 min ago', status: 'open', prevRequests: 12, accountType: 'Enterprise', sla: 'Breached' },
+  { id: 'REQ-004', customerName: 'Michael Chen', company: 'StartupHub', email: 'michael@startuphub.io', subject: 'Request to add bulk user import feature', message: 'We have recently onboarded a new team of 50+ people and manually adding each user is extremely time consuming. Could you consider adding a bulk CSV import feature? This would save us hours of work. Many of our team members have also requested this.', priority: 'medium', category: 'feature', time: '1 hr ago', status: 'in-progress', prevRequests: 2, accountType: 'Starter', sla: 'Within SLA' },
+  { id: 'REQ-005', customerName: 'Emma Wilson', company: 'RetailMax', email: 'emma@retailmax.com', subject: 'Need to update company billing address', message: 'We have moved our office and need to update the billing address on file. New address: 456 Business Park, Suite 300, Austin, TX 78701. Please update this for all future invoices. Also please send a corrected invoice for last month with the new address.', priority: 'low', category: 'account', time: '2 hr ago', status: 'open', prevRequests: 5, accountType: 'Professional', sla: 'Within SLA' },
+  { id: 'REQ-006', customerName: 'David Thompson', company: 'FinanceFirst', email: 'david@financefirst.com', subject: 'SSO configuration assistance needed', message: 'We are trying to set up Single Sign-On with our Azure AD but the configuration guide seems outdated. The screenshots do not match the current interface. We need step by step assistance to complete the SSO setup for our 200+ employees.', priority: 'high', category: 'technical', time: '3 hr ago', status: 'in-progress', prevRequests: 8, accountType: 'Enterprise', sla: 'Within SLA' },
+  { id: 'REQ-007', customerName: 'Lisa Park', company: 'MediaGroup', email: 'lisa@mediagroup.com', subject: 'Cancellation and refund request', message: 'Due to budget cuts, we need to cancel our subscription effective end of this month. We have 45 days remaining on our annual plan and would like a prorated refund for the unused period. Please process this and confirm the refund timeline.', priority: 'high', category: 'billing', time: '4 hr ago', status: 'open', prevRequests: 1, accountType: 'Professional', sla: 'Within SLA' },
+  { id: 'REQ-008', customerName: 'Robert Kumar', company: 'EduTech Pro', email: 'robert@edutech.pro', subject: 'Data export in CSV format not working', message: 'The data export feature is only producing empty CSV files. We have tried multiple times with different date ranges and filters but the downloaded file is always empty. We need this data urgently for our quarterly report due tomorrow.', priority: 'urgent', category: 'technical', time: '5 hr ago', status: 'open', prevRequests: 4, accountType: 'Professional', sla: 'At Risk' }
+];
+
+// AI Draft Templates
+const draftTemplates = {
+  technical: `Dear [NAME],
+
+Thank you for reaching out to our technical support team. I completely understand how frustrating this situation must be, and I want to assure you that resolving this is our top priority.
+
+I have reviewed your request and identified the issue. Our engineering team is aware of this and has been working on a resolution. Here are the immediate steps I recommend:
+
+1. Please clear your browser cache and cookies, then try again.
+2. If the issue persists, try using a private/incognito window.
+3. Our team will also manually reset your access from our end within the next 15 minutes.
+
+I will personally monitor your case and provide updates every 30 minutes until this is fully resolved. You can also reach me directly at support@nexuscrm.com if you need immediate assistance.
+
+We sincerely apologize for the inconvenience and appreciate your patience.
+
+Warm regards,
+Alex Johnson
+Senior Support Agent | NexusCRM
+📞 +1 (800) 555-0199 | support@nexuscrm.com`,
+
+  billing: `Dear [NAME],
+
+I hope this message finds you well. Thank you for bringing this billing matter to our attention — I completely understand your concern and want to assure you this will be resolved promptly.
+
+I have reviewed your account and can confirm the discrepancy you've identified. Here is what we will do:
+
+1. Our billing team will issue a corrected invoice within 1-2 business days.
+2. A credit note for the difference will be applied to your account immediately.
+3. Any overpayment will be refunded to your original payment method within 5-7 business days.
+
+Your account has been flagged as high priority in our billing queue. You will receive a confirmation email once the adjustments have been processed.
+
+We apologize for any confusion caused and truly value your continued partnership with NexusCRM.
+
+Best regards,
+Alex Johnson
+Customer Success Agent | NexusCRM`,
+
+  account: `Dear [NAME],
+
+I am happy to assist you with your account management request. Your satisfaction is our highest priority, and I want to ensure this is handled quickly and accurately.
+
+I have noted the changes you've requested and will process them right away:
+
+1. Your account details have been updated in our system.
+2. You will receive a confirmation email within 5 minutes with the updated information.
+3. All future correspondence and invoices will reflect these changes.
+
+If you notice anything else that needs updating or have any additional questions, please don't hesitate to reach out. We're always here to help.
+
+Thank you for choosing NexusCRM — we truly value your business.
+
+Kind regards,
+Alex Johnson
+Account Manager | NexusCRM`,
+
+  feature: `Dear [NAME],
+
+Thank you so much for your valuable feedback and feature suggestion! We genuinely appreciate customers who take the time to share their ideas — it's how we make NexusCRM better for everyone.
+
+I have forwarded your request to our Product team with a high-priority flag. Here's what happens next:
+
+1. Your suggestion has been logged in our product roadmap tracker (Reference: FEAT-2024-089).
+2. Our product team reviews community requests bi-weekly — you can expect an update within 2 weeks.
+3. As a valued customer, you will be among the first to beta-test this feature if approved.
+
+In the meantime, here are some workarounds our power users currently use for similar workflows: [workaround details will be provided by our team].
+
+We're excited about your ideas and are committed to continuously improving your experience.
+
+Thank you again for helping us build a better product!
+
+Warmly,
+Alex Johnson
+Customer Success | NexusCRM`
+};
+
+const draftTemplatesAlt = {
+  technical: `Dear [NAME],
+
+Thank you for contacting NexusCRM Support. I sincerely apologize for the trouble you're experiencing — I know how critical system access is for your work.
+
+I've escalated your ticket to our Level 2 technical team and they are actively investigating the root cause. Based on my initial analysis, this appears to be related to our recent server update, and we already have a hotfix being deployed.
+
+Expected resolution time: 30-45 minutes from now.
+
+In the interim, here is an alternative method you can use: [Alternative access method provided upon verification].
+
+I will send you a follow-up email the moment this is resolved. Thank you for your extraordinary patience.
+
+Best,
+Alex Johnson | NexusCRM Support`,
+
+  billing: `Dear [NAME],
+
+Thank you for reaching out, and I apologize for the billing error on your account. After reviewing your account history, I can confirm the overcharge and will make this right immediately.
+
+Action being taken:
+• Immediate credit of $251 applied to your account
+• Corrected invoice being re-issued today
+• Refund to original payment method: 3-5 business days
+
+Your loyalty means everything to us. As a token of goodwill, I've added one month of complimentary service to your account.
+
+Sincerely,
+Alex Johnson | NexusCRM`,
+
+  account: `Dear [NAME],
+
+Thank you for getting in touch! I'm Alex from the NexusCRM Customer Success team, and I'll be personally handling your account update today.
+
+I've already made the requested changes to your account. Everything is updated and active. A detailed confirmation has been sent to your registered email address.
+
+Is there anything else I can help you with today? We're always available at support@nexuscrm.com.
+
+Best regards,
+Alex Johnson | NexusCRM`,
+
+  feature: `Dear [NAME],
+
+Wow — what a great idea! Your feature request has been added to our product backlog with a priority flag.
+
+Our VP of Product has been notified personally about this suggestion given the number of users who would benefit. We'll keep you in the loop every step of the way.
+
+Thank you for being such an engaged member of the NexusCRM community!
+
+Cheers,
+Alex Johnson | NexusCRM Product Team`
+};
+
+const notifications = [
+  { icon: 'fa-triangle-exclamation', iconColor: '#ef4444', bg: 'rgba(239,68,68,0.12)', title: 'Urgent: SLA Breach Alert', msg: 'REQ-003 has breached SLA threshold', time: '1 min ago' },
+  { icon: 'fa-robot', iconColor: '#a78bfa', bg: 'rgba(167,139,250,0.12)', title: 'AI Draft Ready', msg: 'New draft generated for Sarah Mitchell', time: '5 min ago' },
+  { icon: 'fa-user-plus', iconColor: '#4f7fff', bg: 'rgba(79,127,255,0.12)', title: 'New Customer Assigned', msg: 'TechCorp Inc. added to your queue', time: '12 min ago' },
+  { icon: 'fa-check-circle', iconColor: '#22c55e', bg: 'rgba(34,197,94,0.12)', title: 'Request Resolved', msg: 'REQ-009 marked as resolved by you', time: '45 min ago' },
+  { icon: 'fa-bell', iconColor: '#f59e0b', bg: 'rgba(245,158,11,0.12)', title: 'Team Meeting Reminder', msg: 'Daily standup in 15 minutes', time: '1 hr ago' }
+];
+
+// ============================================================
+// STATE
+// ============================================================
+let selectedRequest = null;
+let isGenerating = false;
+let currentFilter = 'all';
+let useAltTemplate = false;
+let currentView = 'list';
+let draggedCard = null;
+let toastTimer = null;
+
+const avatarClasses = ['avatar-1','avatar-2','avatar-3','avatar-4','avatar-5','avatar-6','avatar-7','avatar-8'];
+
+function getInitials(name) {
+  return name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase();
+}
+
+function getPriorityBadge(p) {
+  const map = { urgent:'badge-urgent', high:'badge-high', medium:'badge-medium', low:'badge-low' };
+  return `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${map[p] || 'badge-low'}">${p.toUpperCase()}</span>`;
+}
+
+function getCategoryTag(c) {
+  const map = { technical:'tag-technical', billing:'tag-billing', account:'tag-account', feature:'tag-feature' };
+  const icons = { technical:'fa-wrench', billing:'fa-credit-card', account:'fa-user-gear', feature:'fa-lightbulb' };
+  const labels = { technical:'Technical', billing:'Billing', account:'Account', feature:'Feature' };
+  return `<span class="text-[10px] font-medium px-1.5 py-0.5 rounded ${map[c] || 'tag-technical'} flex items-center gap-1"><i class="fas ${icons[c]} text-[9px]"></i>${labels[c]||c}</span>`;
+}
+
+// ============================================================
+// RENDER INBOX
+// ============================================================
+function renderInbox(filter) {
+  const list = document.getElementById('requestList');
+  list.innerHTML = '';
+  let filtered = requests;
+  if (filter === 'open') filtered = requests.filter(r => r.status === 'open');
+  else if (filter === 'in-progress') filtered = requests.filter(r => r.status === 'in-progress');
+  else if (filter === 'urgent') filtered = requests.filter(r => r.priority === 'urgent');
+
+  document.getElementById('requestCount').textContent = `${filtered.length} request${filtered.length !== 1 ? 's' : ''}`;
+
+  if (filtered.length === 0) {
+    list.innerHTML = `<div class="text-center py-12 text-gray-600 text-sm"><i class="fas fa-inbox text-2xl mb-3 block text-gray-700"></i>No requests found</div>`;
+    return;
+  }
+
+  filtered.forEach((req, i) => {
+    const isActive = selectedRequest && selectedRequest.id === req.id;
+    const isResolved = req.status === 'resolved';
+    const div = document.createElement('div');
+    div.className = `request-card ${isActive ? 'active' : ''} ${isResolved ? 'opacity-50' : ''}`;
+    div.innerHTML = `
+      <div class="flex items-start gap-2.5">
+        <div class="w-8 h-8 rounded-full ${avatarClasses[i % 8]} flex items-center justify-center text-white text-xs font-bold flex-shrink-0">${getInitials(req.customerName)}</div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 mb-0.5">
+            <span class="font-semibold text-white text-xs truncate">${req.customerName}</span>
+            ${isResolved ? '<span class="text-[9px] text-green-400 font-medium">✓ Resolved</span>' : ''}
+            ${req.status !== 'resolved' ? '<span class="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0"></span>' : ''}
+          </div>
+          <p class="text-[10px] text-gray-500 truncate">${req.company}</p>
+          <p class="text-xs text-gray-300 mt-1 truncate font-medium">${req.subject}</p>
+        </div>
+        <span class="text-[9px] text-gray-600 flex-shrink-0">${req.time}</span>
+      </div>
+      <div class="flex items-center gap-1.5 mt-2 flex-wrap">
+        ${getPriorityBadge(req.priority)}
+        ${getCategoryTag(req.category)}
+      </div>
+    `;
+    div.addEventListener('click', () => selectRequest(req));
+    list.appendChild(div);
+  });
+}
+
+// ============================================================
+// SELECT REQUEST → PANEL 2
+// ============================================================
+function selectRequest(req) {
+  selectedRequest = req;
+  useAltTemplate = false;
+
+  // Highlight active card
+  document.querySelectorAll('.request-card').forEach(c => c.classList.remove('active'));
+  event && event.currentTarget && event.currentTarget.classList.add('active');
+  renderInbox(currentFilter); // re-render to show active state
+
+  // Update req ID badge
+  document.getElementById('reqIdBadge').textContent = req.id;
+
+  // Show detail panel
+  const detail = document.getElementById('requestDetail');
+  document.getElementById('emptyDetail').style.display = 'none';
+
+  const slaClass = req.sla === 'Breached' ? 'sla-breach' : req.sla === 'At Risk' ? 'sla-warn' : 'sla-ok';
+  const slaIcon = req.sla === 'Breached' ? 'fa-circle-xmark' : req.sla === 'At Risk' ? 'fa-triangle-exclamation' : 'fa-circle-check';
+
+  const convHistory = [
+    { role: 'agent', msg: 'Hello, thank you for contacting NexusCRM support. How can I help you today?', time: '3 days ago' },
+    { role: 'customer', msg: 'I was having a minor issue but it resolved itself. Thanks!', time: '3 days ago' },
+  ];
+
+  detail.innerHTML = `
+    <!-- Customer Card -->
+    <div class="p-3 rounded-xl mb-3 flex items-start gap-3" style="background:rgba(79,127,255,0.07);border:1px solid rgba(79,127,255,0.15)">
+      <div class="w-10 h-10 rounded-full ${avatarClasses[requests.indexOf(req) % 8]} flex items-center justify-center text-white font-bold text-sm flex-shrink-0">${getInitials(req.customerName)}</div>
+      <div class="flex-1 min-w-0">
+        <p class="font-bold text-white text-sm">${req.customerName}</p>
+        <p class="text-xs text-gray-500 truncate">${req.email}</p>
+        <p class="text-xs text-gray-500">${req.company}</p>
+        <div class="flex gap-2 mt-1.5 flex-wrap">
+          <span class="text-[10px] px-1.5 py-0.5 rounded bg-primary/15 text-primary border border-primary/25 font-medium">${req.accountType}</span>
+          <span class="text-[10px] text-gray-500"><i class="fas fa-history text-[9px] mr-1"></i>${req.prevRequests} prev requests</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Subject -->
+    <h3 class="font-bold text-white text-sm mb-2">${req.subject}</h3>
+
+    <!-- Message -->
+    <div class="p-3 rounded-xl mb-3 text-xs text-gray-300 leading-relaxed" style="background:rgba(13,17,23,0.5);border:1px solid rgba(79,127,255,0.1)">
+      ${req.message}
+    </div>
+
+    <!-- Metadata -->
+    <div class="grid grid-cols-2 gap-2 mb-3">
+      <div class="p-2 rounded-lg" style="background:rgba(30,38,64,0.8);border:1px solid rgba(79,127,255,0.08)">
+        <p class="text-[10px] text-gray-600 mb-0.5">Request ID</p>
+        <p class="text-xs font-semibold text-white font-mono">${req.id}</p>
+      </div>
+      <div class="p-2 rounded-lg" style="background:rgba(30,38,64,0.8);border:1px solid rgba(79,127,255,0.08)">
+        <p class="text-[10px] text-gray-600 mb-0.5">Priority</p>
+        <div>${getPriorityBadge(req.priority)}</div>
+      </div>
+      <div class="p-2 rounded-lg" style="background:rgba(30,38,64,0.8);border:1px solid rgba(79,127,255,0.08)">
+        <p class="text-[10px] text-gray-600 mb-0.5">Category</p>
+        <div>${getCategoryTag(req.category)}</div>
+      </div>
+      <div class="p-2 rounded-lg" style="background:rgba(30,38,64,0.8);border:1px solid rgba(79,127,255,0.08)">
+        <p class="text-[10px] text-gray-600 mb-0.5">SLA Status</p>
+        <p class="text-xs font-semibold ${slaClass}"><i class="fas ${slaIcon} mr-1 text-[10px]"></i>${req.sla}</p>
+      </div>
+    </div>
+
+    <!-- Conversation History -->
+    <p class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Previous History</p>
+    <div class="space-y-2 mb-4">
+      ${convHistory.map(c => `
+        <div class="${c.role === 'agent' ? 'text-right' : ''}">
+          <div class="${c.role === 'agent' ? 'conv-bubble-agent' : 'conv-bubble-customer'}">${c.msg}</div>
+          <p class="text-[10px] text-gray-600 mt-0.5 px-1">${c.time}</p>
+        </div>
+      `).join('')}
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="grid grid-cols-2 gap-2">
+      <button onclick="triggerAIDraft()" class="col-span-2 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold text-white transition-all hover:shadow-lg hover:-translate-y-0.5" style="background:linear-gradient(135deg,#4f7fff,#a78bfa);box-shadow:0 4px 15px rgba(79,127,255,0.25)">
+        <i class="fas fa-wand-magic-sparkles text-xs"></i> Generate AI Draft
+      </button>
+      <button onclick="showToastMsg('Team Assigned','Request assigned to Level 2 support team.')" class="flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-semibold border border-white/10 bg-surface-2/60 text-gray-300 hover:border-primary/30 hover:text-white transition-all">
+        <i class="fas fa-users text-xs"></i> Assign Team
+      </button>
+      <button onclick="showToastMsg('Escalated','Request escalated to senior support.')" class="flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-semibold border border-orange-500/30 bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 transition-all">
+        <i class="fas fa-arrow-up text-xs"></i> Escalate
+      </button>
+      <button onclick="closeRequest('${req.id}')" class="col-span-2 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-semibold border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all">
+        <i class="fas fa-xmark text-xs"></i> Close Request
+      </button>
+    </div>
+  `;
+
+  // Reset AI panel to empty state
+  resetAIPanel();
+}
+
+function closeRequest(id) {
+  const req = requests.find(r => r.id === id);
+  if (req) {
+    req.status = 'resolved';
+    renderInbox(currentFilter);
+    showToastMsg('Request Closed', `${id} has been closed successfully.`);
+  }
+}
+
+// ============================================================
+// AI DRAFT STUDIO
+// ============================================================
+function resetAIPanel() {
+  document.getElementById('aiEmptyState').classList.remove('hidden');
+  document.getElementById('aiEmptyState').style.display = 'flex';
+  document.getElementById('aiWorkingState').classList.add('hidden');
+  document.getElementById('aiDraftResult').classList.add('hidden');
+  document.getElementById('draftActions').classList.add('hidden');
+  document.getElementById('draftTextarea').value = '';
+  document.getElementById('typingCursor').style.display = 'none';
+  // Reset steps
+  ['step1','step2','step3'].forEach(s => {
+    document.getElementById(s).classList.remove('visible');
+    document.getElementById(s+'Check').classList.add('hidden');
+  });
+  document.getElementById('aiProgressBar').style.width = '0%';
+  isGenerating = false;
+}
+
+function triggerAIDraft() {
+  if (!selectedRequest || isGenerating) return;
+  isGenerating = true;
+
+  // Scroll AI panel into view
+  document.getElementById('aiEmptyState').style.display = 'none';
+  document.getElementById('aiDraftResult').classList.add('hidden');
+  document.getElementById('draftActions').classList.add('hidden');
+
+  const workingState = document.getElementById('aiWorkingState');
+  workingState.classList.remove('hidden');
+  workingState.style.display = 'flex';
+
+  // Reset steps
+  ['step1','step2','step3'].forEach(s => {
+    document.getElementById(s).classList.remove('visible');
+    document.getElementById(s+'Check').classList.add('hidden');
+  });
+  document.getElementById('aiProgressBar').style.width = '0%';
+
+  const progressBar = document.getElementById('aiProgressBar');
+  let progress = 0;
+  const progressInterval = setInterval(() => {
+    progress += (100 - progress) * 0.05;
+    if (progress > 95) progress = 95;
+    progressBar.style.width = progress + '%';
+  }, 100);
+
+  // Step 1
+  setTimeout(() => {
+    document.getElementById('step1').classList.add('visible');
+  }, 200);
+  setTimeout(() => {
+    document.getElementById('step1Check').classList.remove('hidden');
+  }, 700);
+
+  // Step 2
+  setTimeout(() => {
+    document.getElementById('step2').classList.add('visible');
+  }, 900);
+  setTimeout(() => {
+    document.getElementById('step2Check').classList.remove('hidden');
+  }, 1400);
+
+  // Step 3
+  setTimeout(() => {
+    document.getElementById('step3').classList.add('visible');
+  }, 1600);
+
+  // Start typewriter
+  setTimeout(() => {
+    document.getElementById('step3Check').classList.remove('hidden');
+    clearInterval(progressInterval);
+    progressBar.style.width = '100%';
+
+    // Show draft result panel
+    workingState.classList.add('hidden');
+    const resultDiv = document.getElementById('aiDraftResult');
+    resultDiv.classList.remove('hidden');
+    resultDiv.style.display = 'flex';
+
+    // Get template
+    const cat = selectedRequest.category;
+    const templateMap = { technical:'technical', billing:'billing', account:'account', feature:'feature' };
+    const templateKey = templateMap[cat] || 'technical';
+    const templates = useAltTemplate ? draftTemplatesAlt : draftTemplates;
+    let draftText = (templates[templateKey] || draftTemplates.technical).replace(/\[NAME\]/g, selectedRequest.customerName.split(' ')[0]);
+
+    // Typewriter effect
+    const textarea = document.getElementById('draftTextarea');
+    textarea.value = '';
+    textarea.readOnly = true;
+    document.getElementById('typingCursor').style.display = 'inline-block';
+
+    let charIndex = 0;
+    const speed = 12;
+    function typeChar() {
+      if (charIndex < draftText.length) {
+        textarea.value += draftText[charIndex];
+        textarea.scrollTop = textarea.scrollHeight;
+        charIndex++;
+        setTimeout(typeChar, speed);
+      } else {
+        document.getElementById('typingCursor').style.display = 'none';
+        document.getElementById('draftActions').classList.remove('hidden');
+        isGenerating = false;
+        // Animate confidence circle
+        animateConfidence(94);
+      }
+    }
+    typeChar();
+  }, 2200);
+}
+
+function animateConfidence(percent) {
+  const circle = document.getElementById('confidenceCircle');
+  const radius = 21;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (percent / 100) * circumference;
+  setTimeout(() => {
+    circle.style.strokeDashoffset = offset;
+  }, 100);
+}
+
+function approveAndSend() {
+  if (!selectedRequest) return;
+  selectedRequest.status = 'resolved';
+  renderInbox(currentFilter);
+  renderKanban();
+  showToastMsg('Response Sent! ✓', `Email successfully delivered to ${selectedRequest.customerName}.`);
+  setTimeout(resetAIPanel, 500);
+}
+
+function editDraft() {
+  const ta = document.getElementById('draftTextarea');
+  ta.readOnly = false;
+  ta.focus();
+  ta.style.borderColor = 'rgba(79,127,255,0.5)';
+  showToastMsg('Edit Mode', 'You can now edit the AI draft directly.');
+}
+
+function regenerateDraft() {
+  if (isGenerating) return;
+  useAltTemplate = !useAltTemplate;
+  document.getElementById('draftActions').classList.add('hidden');
+  triggerAIDraft();
+}
+
+// ============================================================
+// FILTER TABS
+// ============================================================
+function filterRequests(filter, btn) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-tab').forEach(b => {
+    if (b.onclick && b.onclick.toString().includes('filterRequests')) {
+      b.classList.remove('active');
+    }
+  });
+  btn.classList.add('active');
+  renderInbox(filter);
+}
+
+// ============================================================
+// VIEW TOGGLE
+// ============================================================
+function switchView(view) {
+  currentView = view;
+  if (view === 'list') {
+    document.getElementById('listView').classList.remove('hidden');
+    document.getElementById('kanbanView').classList.add('hidden');
+    document.getElementById('tabList').classList.add('active');
+    document.getElementById('tabKanban').classList.remove('active');
+  } else {
+    document.getElementById('listView').classList.add('hidden');
+    document.getElementById('kanbanView').classList.remove('hidden');
+    document.getElementById('tabKanban').classList.add('active');
+    document.getElementById('tabList').classList.remove('active');
+    renderKanban();
+  }
+}
+
+// ============================================================
+// KANBAN
+// ============================================================
+function renderKanban() {
+  const columns = { open: [], 'in-progress': [], resolved: [] };
+  requests.forEach(r => {
+    const col = columns[r.status] || columns['open'];
+    col.push(r);
+  });
+
+  const colMap = { open: 'kanban-open-cards', 'in-progress': 'kanban-inprogress-cards', resolved: 'kanban-resolved-cards' };
+  const countMap = { open: 'kanban-open-count', 'in-progress': 'kanban-inprogress-count', resolved: 'kanban-resolved-count' };
+
+  Object.entries(columns).forEach(([status, reqs]) => {
+    const container = document.getElementById(colMap[status]);
+    const countEl = document.getElementById(countMap[status]);
+    if (countEl) countEl.textContent = reqs.length;
+    if (!container) return;
+    container.innerHTML = '';
+    reqs.forEach((req, i) => {
+      const card = document.createElement('div');
+      card.className = 'kanban-card';
+      card.draggable = true;
+      card.dataset.id = req.id;
+      card.innerHTML = `
+        <div class="flex items-center gap-2 mb-1.5">
+          <div class="w-6 h-6 rounded-full ${avatarClasses[requests.indexOf(req) % 8]} flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">${getInitials(req.customerName)}</div>
+          <span class="text-xs font-semibold text-white truncate">${req.customerName}</span>
+          ${getPriorityBadge(req.priority)}
+        </div>
+        <p class="text-[11px] text-gray-400 leading-tight truncate">${req.subject}</p>
+        <div class="flex items-center gap-2 mt-1.5">
+          ${getCategoryTag(req.category)}
+          <span class="text-[10px] text-gray-600 ml-auto">${req.time}</span>
+        </div>
+      `;
+      card.addEventListener('dragstart', e => {
+        draggedCard = req.id;
+        card.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      card.addEventListener('dragend', () => {
+        card.classList.remove('dragging');
+        draggedCard = null;
+      });
+      container.appendChild(card);
+    });
+  });
+}
+
+function kanbanDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  e.currentTarget.classList.add('drag-over');
+}
+
+function kanbanDrop(e, newStatus) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if (!draggedCard) return;
+  const req = requests.find(r => r.id === draggedCard);
+  if (req) {
+    req.status = newStatus;
+    renderKanban();
+    showToastMsg('Status Updated', `${req.id} moved to ${newStatus.replace('-',' ')}.`);
+  }
+}
+
+// Also remove drag-over on dragleave
+document.addEventListener('dragleave', e => {
+  if (e.target.classList && e.target.classList.contains('kanban-column')) {
+    e.target.classList.remove('drag-over');
+  }
+});
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+function renderNotifications() {
+  const list = document.getElementById('notifList');
+  notifications.forEach(n => {
+    const div = document.createElement('div');
+    div.className = 'px-4 py-3 border-b border-white/5 flex items-start gap-3 hover:bg-white/3 cursor-pointer transition-colors';
+    div.innerHTML = `
+      <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style="background:${n.bg}">
+        <i class="fas ${n.icon} text-xs" style="color:${n.iconColor}"></i>
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-xs font-semibold text-white truncate">${n.title}</p>
+        <p class="text-[11px] text-gray-500 mt-0.5 truncate">${n.msg}</p>
+        <p class="text-[10px] text-gray-600 mt-0.5">${n.time}</p>
+      </div>
+    `;
+    list.appendChild(div);
+  });
+}
+
+function toggleNotifications() {
+  const dropdown = document.getElementById('notifDropdown');
+  dropdown.classList.toggle('open');
+}
+
+document.addEventListener('click', e => {
+  const wrapper = document.getElementById('notifWrapper');
+  if (wrapper && !wrapper.contains(e.target)) {
+    document.getElementById('notifDropdown').classList.remove('open');
+  }
+});
+
+// ============================================================
+// SIDEBAR CONTROLS
+// ============================================================
+function toggleSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  sidebar.classList.toggle('mobile-open');
+}
+
+function toggleSidebarDesktop() {
+  const sidebar = document.getElementById('sidebar');
+  const main = document.getElementById('main-wrapper');
+  sidebar.classList.toggle('collapsed');
+}
+
+function scrollToAIPanel() {
+  document.getElementById('mainScroll').scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+function showToast() {
+  const toast = document.getElementById('toast');
+  toast.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(hideToast, 4000);
+}
+
+function hideToast() {
+  document.getElementById('toast').classList.remove('show');
+}
+
+function showToastMsg(title, msg, isError = false) {
+  document.getElementById('toastTitle').textContent = title;
+  document.getElementById('toastMsg').textContent = msg;
+  const toast = document.getElementById('toast');
+  toast.style.borderColor = isError ? 'rgba(239,68,68,0.4)' : 'rgba(0,212,170,0.4)';
+  showToast();
+}
+
+// ============================================================
+// CHARTS
+// ============================================================
+function initCharts() {
+  // Volume Chart (Bar)
+  const vCtx = document.getElementById('volumeChart').getContext('2d');
+  new Chart(vCtx, {
+    type: 'bar',
+    data: {
+      labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+      datasets: [{
+        label: 'Requests',
+        data: [32, 48, 41, 55, 47, 29, 18],
+        backgroundColor: (ctx) => {
+          const gradient = ctx.chart.ctx.createLinearGradient(0, 0, 0, 200);
+          gradient.addColorStop(0, 'rgba(79,127,255,0.8)');
+          gradient.addColorStop(1, 'rgba(79,127,255,0.1)');
+          return gradient;
+        },
+        borderRadius: 6,
+        borderSkipped: false,
+        borderColor: 'rgba(79,127,255,0.6)',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: {
+        backgroundColor: 'rgba(22,27,46,0.95)',
+        borderColor: 'rgba(79,127,255,0.3)',
+        borderWidth: 1,
+        titleColor: '#fff',
+        bodyColor: '#8896b3',
+        callbacks: { label: ctx => ` ${ctx.raw} requests` }
+      }},
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#4a5568', font: { size: 10 } } },
+        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#4a5568', font: { size: 10 } }, beginAtZero: true }
+      }
+    }
+  });
+
+  // Category Doughnut Chart
+  const cCtx = document.getElementById('categoryChart').getContext('2d');
+  new Chart(cCtx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Technical', 'Billing', 'Account', 'Feature'],
+      datasets: [{
+        data: [38, 27, 21, 14],
+        backgroundColor: [
+          'rgba(79,127,255,0.8)',
+          'rgba(167,139,250,0.8)',
+          'rgba(0,212,170,0.8)',
+          'rgba(251,146,60,0.8)'
+        ],
+        borderColor: [
+          'rgba(79,127,255,0.3)',
+          'rgba(167,139,250,0.3)',
+          'rgba(0,212,170,0.3)',
+          'rgba(251,146,60,0.3)'
+        ],
+        borderWidth: 2,
+        hoverOffset: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '72%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(22,27,46,0.95)',
+          borderColor: 'rgba(79,127,255,0.3)',
+          borderWidth: 1,
+          titleColor: '#fff',
+          bodyColor: '#8896b3',
+          callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw}%` }
+        }
+      }
+    }
+  });
+}
+
+// ============================================================
+// INIT
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  renderInbox('all');
+  renderNotifications();
+  renderKanban();
+  initCharts();
+});
+</script>
+</body>
+</html>

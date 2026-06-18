@@ -1,0 +1,1716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NexusCRM — Customer Portal</title>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#4f7fff',
+            secondary: '#00d4aa',
+            dark: '#0d1117',
+            surface: '#161b2e',
+            'surface-2': '#1e2640'
+          },
+          fontFamily: {
+            inter: ['Inter', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    * { font-family: 'Inter', sans-serif; box-sizing: border-box; }
+    body { background-color: #0d1117; color: #e2e8f0; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0d1117; }
+    ::-webkit-scrollbar-thumb { background: #2d3748; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #4f7fff; }
+
+    /* Glassmorphism */
+    .glass {
+      background: rgba(22, 27, 46, 0.7);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(79, 127, 255, 0.15);
+    }
+    .glass-light {
+      background: rgba(30, 38, 64, 0.6);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(79, 127, 255, 0.1);
+    }
+
+    /* Sidebar */
+    .sidebar { width: 260px; min-height: calc(100vh - 64px); background: #161b2e; border-right: 1px solid rgba(79,127,255,0.1); }
+    .nav-item { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-radius: 10px; cursor: pointer; transition: all 0.25s ease; color: #94a3b8; font-size: 14px; font-weight: 500; margin: 2px 12px; }
+    .nav-item:hover { background: rgba(79,127,255,0.1); color: #e2e8f0; }
+    .nav-item.active { background: linear-gradient(135deg, rgba(79,127,255,0.25), rgba(0,212,170,0.1)); color: #fff; border-left: 3px solid #4f7fff; }
+    .nav-item i { width: 18px; text-align: center; font-size: 15px; }
+
+    /* Gradient text */
+    .gradient-text {
+      background: linear-gradient(135deg, #4f7fff, #00d4aa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Stat cards */
+    .stat-card {
+      background: #161b2e;
+      border: 1px solid rgba(79,127,255,0.12);
+      border-radius: 16px;
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+    .stat-card.blue::before { background: linear-gradient(90deg, #4f7fff, #00d4aa); }
+    .stat-card.green::before { background: linear-gradient(90deg, #00d4aa, #00b894); }
+    .stat-card.yellow::before { background: linear-gradient(90deg, #f59e0b, #ef4444); }
+    .stat-card.purple::before { background: linear-gradient(90deg, #8b5cf6, #4f7fff); }
+    .stat-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+
+    /* Badge */
+    .badge-open { background: rgba(79,127,255,0.2); color: #4f7fff; border: 1px solid rgba(79,127,255,0.3); }
+    .badge-inprogress { background: rgba(245,158,11,0.2); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
+    .badge-resolved { background: rgba(0,212,170,0.2); color: #00d4aa; border: 1px solid rgba(0,212,170,0.3); }
+    .badge-closed { background: rgba(100,116,139,0.2); color: #64748b; border: 1px solid rgba(100,116,139,0.3); }
+    .badge-urgent { background: rgba(239,68,68,0.2); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+    .badge-high { background: rgba(245,158,11,0.2); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
+    .badge-medium { background: rgba(79,127,255,0.2); color: #4f7fff; border: 1px solid rgba(79,127,255,0.3); }
+    .badge-low { background: rgba(100,116,139,0.2); color: #94a3b8; border: 1px solid rgba(100,116,139,0.3); }
+
+    /* Stepper */
+    .step-done { background: #00d4aa; border-color: #00d4aa; color: #fff; }
+    .step-active { background: #4f7fff; border-color: #4f7fff; color: #fff; animation: pulse-blue 1.5s infinite; }
+    .step-pending { background: transparent; border-color: #2d3748; color: #64748b; }
+    .step-line-done { background: #00d4aa; }
+    .step-line-pending { background: #2d3748; }
+
+    @keyframes pulse-blue {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(79,127,255,0.4); }
+      50% { box-shadow: 0 0 0 8px rgba(79,127,255,0); }
+    }
+    @keyframes spin-slow {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .spin-slow { animation: spin-slow 2s linear infinite; }
+
+    /* Star rating */
+    .star { font-size: 28px; cursor: pointer; color: #2d3748; transition: all 0.2s ease; }
+    .star.filled { color: #f59e0b; text-shadow: 0 0 10px rgba(245,158,11,0.5); }
+    .star:hover { transform: scale(1.2); }
+
+    /* Input styles */
+    .form-input {
+      background: #1e2640;
+      border: 1px solid rgba(79,127,255,0.15);
+      border-radius: 10px;
+      color: #e2e8f0;
+      padding: 12px 16px;
+      width: 100%;
+      font-size: 14px;
+      transition: all 0.25s ease;
+      outline: none;
+    }
+    .form-input:focus {
+      border-color: #4f7fff;
+      box-shadow: 0 0 0 3px rgba(79,127,255,0.15);
+    }
+    .form-input::placeholder { color: #475569; }
+
+    /* Drag drop zone */
+    .drop-zone {
+      border: 2px dashed rgba(79,127,255,0.3);
+      border-radius: 12px;
+      padding: 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      background: rgba(79,127,255,0.03);
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: #4f7fff;
+      background: rgba(79,127,255,0.08);
+    }
+
+    /* Quick action cards */
+    .quick-action {
+      background: #1e2640;
+      border: 1px solid rgba(79,127,255,0.12);
+      border-radius: 14px;
+      padding: 20px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-align: center;
+    }
+    .quick-action:hover {
+      transform: translateY(-4px);
+      border-color: #4f7fff;
+      box-shadow: 0 10px 30px rgba(79,127,255,0.2);
+    }
+
+    /* Timeline */
+    .timeline-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 5px;
+    }
+
+    /* Section hide/show */
+    .section { display: none; }
+    .section.active { display: block; }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal-box {
+      background: #161b2e;
+      border: 1px solid rgba(79,127,255,0.2);
+      border-radius: 20px;
+      max-width: 700px;
+      width: 95%;
+      max-height: 90vh;
+      overflow-y: auto;
+      transform: scale(0.9);
+      transition: transform 0.3s ease;
+    }
+    .modal-overlay.open .modal-box { transform: scale(1); }
+
+    /* Notification badge */
+    .notif-badge {
+      position: absolute; top: -4px; right: -4px;
+      width: 18px; height: 18px;
+      background: #ef4444;
+      border-radius: 50%;
+      font-size: 10px;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-weight: 700;
+    }
+
+    /* Toggle switch */
+    .toggle { position: relative; display: inline-block; width: 46px; height: 24px; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #2d3748;
+      border-radius: 24px;
+      transition: 0.4s;
+    }
+    .slider:before {
+      position: absolute; content: '';
+      height: 18px; width: 18px;
+      left: 3px; bottom: 3px;
+      background: #94a3b8;
+      border-radius: 50%;
+      transition: 0.4s;
+    }
+    input:checked + .slider { background: #4f7fff; }
+    input:checked + .slider:before { transform: translateX(22px); background: #fff; }
+
+    /* Table */
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table th {
+      padding: 14px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #64748b;
+      text-align: left;
+      border-bottom: 1px solid rgba(79,127,255,0.1);
+    }
+    .data-table td {
+      padding: 14px 16px;
+      font-size: 14px;
+      color: #cbd5e1;
+      border-bottom: 1px solid rgba(79,127,255,0.05);
+    }
+    .data-table tr:hover td { background: rgba(79,127,255,0.04); }
+
+    /* Chat bubble */
+    .chat-bubble-agent {
+      background: #1e2640;
+      border: 1px solid rgba(79,127,255,0.15);
+      border-radius: 14px 14px 14px 4px;
+      padding: 12px 16px;
+    }
+    .chat-bubble-user {
+      background: rgba(79,127,255,0.15);
+      border: 1px solid rgba(79,127,255,0.25);
+      border-radius: 14px 14px 4px 14px;
+      padding: 12px 16px;
+    }
+
+    /* Glow effect */
+    .glow-blue { box-shadow: 0 0 20px rgba(79,127,255,0.15); }
+    .glow-green { box-shadow: 0 0 20px rgba(0,212,170,0.15); }
+
+    /* Priority radio */
+    .priority-radio input[type="radio"] { display: none; }
+    .priority-radio label {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 16px;
+      border-radius: 10px;
+      border: 1.5px solid rgba(79,127,255,0.15);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      background: #1e2640;
+    }
+    .priority-radio input[type="radio"]:checked + label {
+      border-color: #4f7fff;
+      background: rgba(79,127,255,0.12);
+    }
+
+    /* Recommend button */
+    .recommend-btn {
+      padding: 10px 24px;
+      border-radius: 10px;
+      border: 1.5px solid rgba(79,127,255,0.2);
+      background: #1e2640;
+      color: #94a3b8;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.25s ease;
+    }
+    .recommend-btn.selected {
+      border-color: #00d4aa;
+      background: rgba(0,212,170,0.15);
+      color: #00d4aa;
+    }
+    .recommend-btn:hover { border-color: #4f7fff; color: #e2e8f0; }
+
+    /* Button base */
+    .btn-primary {
+      background: linear-gradient(135deg, #4f7fff, #00d4aa);
+      color: #fff;
+      padding: 12px 28px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      border: none;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-primary:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+      box-shadow: 0 8px 25px rgba(79,127,255,0.35);
+    }
+    .btn-primary:active { transform: translateY(0); }
+
+    /* Search input */
+    .search-input {
+      background: #1e2640;
+      border: 1px solid rgba(79,127,255,0.15);
+      border-radius: 10px;
+      color: #e2e8f0;
+      padding: 10px 16px 10px 40px;
+      font-size: 14px;
+      transition: all 0.25s ease;
+      outline: none;
+    }
+    .search-input:focus { border-color: #4f7fff; }
+
+    /* Filter pill */
+    .filter-pill {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid rgba(79,127,255,0.15);
+      background: #1e2640;
+      color: #94a3b8;
+      transition: all 0.2s ease;
+    }
+    .filter-pill.active {
+      background: rgba(79,127,255,0.2);
+      border-color: #4f7fff;
+      color: #fff;
+    }
+    .filter-pill:hover { border-color: #4f7fff; color: #e2e8f0; }
+
+    /* Live dot */
+    .live-dot {
+      width: 8px; height: 8px;
+      background: #00d4aa;
+      border-radius: 50%;
+      animation: livePulse 1.5s ease-in-out infinite;
+    }
+    @keyframes livePulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    /* Success modal icon */
+    @keyframes successPop {
+      0% { transform: scale(0); opacity: 0; }
+      60% { transform: scale(1.2); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .success-icon { animation: successPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+
+    /* Fade-in */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in { animation: fadeInUp 0.4s ease forwards; }
+
+    /* Thank you animation */
+    @keyframes thankYouPop {
+      0% { transform: scale(0.8); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .thankyou-anim { animation: thankYouPop 0.5s ease forwards; }
+
+    /* Scrollable modal */
+    .modal-box::-webkit-scrollbar { width: 4px; }
+    .modal-box::-webkit-scrollbar-track { background: transparent; }
+    .modal-box::-webkit-scrollbar-thumb { background: #2d3748; border-radius: 2px; }
+
+    /* Active highlight card */
+    .req-highlight {
+      background: linear-gradient(135deg, rgba(79,127,255,0.08), rgba(0,212,170,0.05));
+      border: 1px solid rgba(79,127,255,0.25);
+      border-radius: 16px;
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .req-highlight::after {
+      content: '';
+      position: absolute;
+      top: 0; right: 0;
+      width: 150px; height: 150px;
+      background: radial-gradient(circle, rgba(79,127,255,0.08), transparent);
+      border-radius: 50%;
+    }
+
+    /* Profile avatar */
+    .profile-avatar {
+      width: 80px; height: 80px;
+      background: linear-gradient(135deg, #4f7fff, #00d4aa);
+      border-radius: 20px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 30px;
+      font-weight: 800;
+      color: #fff;
+      flex-shrink: 0;
+    }
+
+    /* Notification panel */
+    .notif-panel {
+      position: absolute;
+      top: 56px; right: 0;
+      width: 320px;
+      background: #161b2e;
+      border: 1px solid rgba(79,127,255,0.2);
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      z-index: 200;
+      display: none;
+    }
+    .notif-panel.open { display: block; }
+  </style>
+</head>
+<body class="bg-dark min-h-screen">
+
+  <!-- ══════════════════════ TOP NAVIGATION ══════════════════════ -->
+  <nav class="h-16 glass sticky top-0 z-50 flex items-center justify-between px-6 border-b border-white/5">
+    <!-- Logo + badge -->
+    <div class="flex items-center gap-4">
+      <a href="index.html" class="flex items-center gap-2 group">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg group-hover:shadow-primary/40 transition-all">
+          <i class="fa-solid fa-bolt text-white text-sm"></i>
+        </div>
+        <span class="text-lg font-bold gradient-text">NexusCRM</span>
+      </a>
+      <span class="px-3 py-1 rounded-full text-xs font-600 bg-secondary/10 text-secondary border border-secondary/30 font-semibold">Customer Portal</span>
+    </div>
+
+    <!-- Right side -->
+    <div class="flex items-center gap-4">
+      <!-- Notification bell -->
+      <div class="relative">
+        <button id="notif-btn" class="w-9 h-9 rounded-xl bg-surface-2 flex items-center justify-center text-slate-400 hover:text-white hover:bg-surface transition-all relative">
+          <i class="fa-regular fa-bell text-sm"></i>
+          <span class="notif-badge">3</span>
+        </button>
+        <!-- Notification Panel -->
+        <div id="notif-panel" class="notif-panel">
+          <div class="p-4 border-b border-white/5 flex items-center justify-between">
+            <span class="font-semibold text-white text-sm">Notifications</span>
+            <span class="text-xs text-primary cursor-pointer hover:underline">Mark all read</span>
+          </div>
+          <div class="p-2 space-y-1">
+            <div class="p-3 rounded-xl hover:bg-surface-2 transition cursor-pointer">
+              <div class="flex items-start gap-3">
+                <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5"><i class="fa-solid fa-reply text-primary text-xs"></i></div>
+                <div>
+                  <p class="text-sm text-white font-medium">Agent replied to REQ-001</p>
+                  <p class="text-xs text-slate-400 mt-0.5">2 hours ago</p>
+                </div>
+              </div>
+            </div>
+            <div class="p-3 rounded-xl hover:bg-surface-2 transition cursor-pointer">
+              <div class="flex items-start gap-3">
+                <div class="w-8 h-8 rounded-full bg-secondary/20 flex items-center justify-center flex-shrink-0 mt-0.5"><i class="fa-solid fa-check text-secondary text-xs"></i></div>
+                <div>
+                  <p class="text-sm text-white font-medium">REQ-003 has been resolved</p>
+                  <p class="text-xs text-slate-400 mt-0.5">5 days ago</p>
+                </div>
+              </div>
+            </div>
+            <div class="p-3 rounded-xl hover:bg-surface-2 transition cursor-pointer">
+              <div class="flex items-start gap-3">
+                <div class="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center flex-shrink-0 mt-0.5"><i class="fa-solid fa-star text-yellow-400 text-xs"></i></div>
+                <div>
+                  <p class="text-sm text-white font-medium">Rate your experience on REQ-003</p>
+                  <p class="text-xs text-slate-400 mt-0.5">5 days ago</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- User info -->
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center font-bold text-white text-sm">SM</div>
+        <div class="hidden sm:block">
+          <p class="text-sm font-semibold text-white leading-none">Sarah Mitchell</p>
+          <p class="text-xs text-slate-400 mt-0.5">TechCorp Inc</p>
+        </div>
+      </div>
+
+      <!-- Logout -->
+      <a href="login.html" class="flex items-center gap-2 px-4 py-2 rounded-xl border border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all text-sm font-medium">
+        <i class="fa-solid fa-right-from-bracket text-xs"></i>
+        <span class="hidden sm:inline">Logout</span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- ══════════════════════ LAYOUT WRAPPER ══════════════════════ -->
+  <div class="flex" style="min-height: calc(100vh - 64px);">
+
+    <!-- ══════════════════════ SIDEBAR ══════════════════════ -->
+    <aside class="sidebar flex-shrink-0 flex flex-col justify-between py-6">
+      <div>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-widest px-6 mb-4">Navigation</p>
+        <nav class="space-y-1">
+          <div class="nav-item active" data-section="dashboard">
+            <i class="fa-solid fa-gauge-high"></i>
+            <span>Dashboard</span>
+          </div>
+          <div class="nav-item" data-section="submit-request">
+            <i class="fa-solid fa-plus-circle"></i>
+            <span>Submit Request</span>
+          </div>
+          <div class="nav-item" data-section="my-requests">
+            <i class="fa-solid fa-list-check"></i>
+            <span>My Requests</span>
+            <span class="ml-auto bg-primary/20 text-primary text-xs px-2 py-0.5 rounded-full font-semibold">3</span>
+          </div>
+          <div class="nav-item" data-section="feedback">
+            <i class="fa-solid fa-star"></i>
+            <span>Feedback</span>
+          </div>
+          <div class="nav-item" data-section="profile">
+            <i class="fa-solid fa-circle-user"></i>
+            <span>Profile</span>
+          </div>
+        </nav>
+      </div>
+
+      <!-- Bottom: Support info + Live Chat -->
+      <div class="px-4 space-y-4">
+        <div class="p-4 rounded-xl bg-surface-2 border border-white/5">
+          <div class="flex items-center gap-2 mb-2">
+            <i class="fa-solid fa-headset text-secondary text-sm"></i>
+            <span class="text-xs font-semibold text-white">Support Hours</span>
+          </div>
+          <p class="text-xs text-slate-400 leading-relaxed">Mon – Fri: 9AM – 6PM IST<br/>Sat: 10AM – 2PM IST<br/>Sun: Closed</p>
+        </div>
+        <button class="w-full flex items-center justify-center gap-3 py-3 rounded-xl bg-secondary/10 border border-secondary/25 text-secondary font-semibold text-sm hover:bg-secondary/20 transition-all group">
+          <div class="live-dot"></div>
+          <i class="fa-solid fa-comments"></i>
+          Live Chat
+        </button>
+      </div>
+    </aside>
+
+    <!-- ══════════════════════ MAIN CONTENT ══════════════════════ -->
+    <main class="flex-1 p-6 lg:p-8 overflow-y-auto">
+
+      <!-- ════════ SECTION 1: DASHBOARD ════════ -->
+      <section id="section-dashboard" class="section active fade-in">
+        <!-- Welcome Banner -->
+        <div class="mb-8 req-highlight flex items-center justify-between">
+          <div>
+            <h1 class="text-2xl font-bold text-white mb-1">Welcome back, Sarah! 👋</h1>
+            <p class="text-slate-400 text-sm">Here's what's happening with your support requests today.</p>
+            <div class="flex items-center gap-2 mt-3">
+              <span class="text-xs font-medium text-slate-400"><i class="fa-solid fa-calendar-day mr-1 text-primary"></i>Thursday, June 18, 2026</span>
+              <span class="text-slate-600">•</span>
+              <span class="text-xs font-medium text-secondary"><i class="fa-solid fa-circle mr-1 text-xs"></i>Support is online</span>
+            </div>
+          </div>
+          <div class="hidden md:flex flex-col items-center">
+            <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-3xl font-black text-white shadow-2xl">SM</div>
+            <span class="text-xs text-slate-400 mt-2">TechCorp Inc</span>
+          </div>
+        </div>
+
+        <!-- Stats Row -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div class="stat-card blue">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Requests</span>
+              <div class="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center">
+                <i class="fa-solid fa-ticket text-primary text-sm"></i>
+              </div>
+            </div>
+            <div class="text-3xl font-black text-white mb-1" id="stat-total">3</div>
+            <p class="text-xs text-slate-500">All time submissions</p>
+          </div>
+          <div class="stat-card yellow">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Open</span>
+              <div class="w-10 h-10 rounded-xl bg-yellow-500/15 flex items-center justify-center">
+                <i class="fa-solid fa-clock text-yellow-400 text-sm"></i>
+              </div>
+            </div>
+            <div class="text-3xl font-black text-white mb-1" id="stat-open">2</div>
+            <p class="text-xs text-slate-500">Awaiting resolution</p>
+          </div>
+          <div class="stat-card green">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Resolved</span>
+              <div class="w-10 h-10 rounded-xl bg-secondary/15 flex items-center justify-center">
+                <i class="fa-solid fa-circle-check text-secondary text-sm"></i>
+              </div>
+            </div>
+            <div class="text-3xl font-black text-white mb-1" id="stat-resolved">1</div>
+            <p class="text-xs text-slate-500">Successfully closed</p>
+          </div>
+          <div class="stat-card purple">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Avg Response</span>
+              <div class="w-10 h-10 rounded-xl bg-violet-500/15 flex items-center justify-center">
+                <i class="fa-solid fa-bolt text-violet-400 text-sm"></i>
+              </div>
+            </div>
+            <div class="text-3xl font-black text-white mb-1">4.2<span class="text-base font-semibold text-slate-400">h</span></div>
+            <p class="text-xs text-slate-500">Average first response</p>
+          </div>
+        </div>
+
+        <!-- Active Request Highlight + Recent Activity -->
+        <div class="grid lg:grid-cols-3 gap-6 mb-8">
+          <!-- Active Request -->
+          <div class="lg:col-span-2">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-lg font-bold text-white">Active Request Highlight</h2>
+              <span class="flex items-center gap-2 text-xs text-yellow-400 font-semibold">
+                <div class="w-2 h-2 bg-yellow-400 rounded-full" style="animation: livePulse 1.5s infinite;"></div>
+                In Progress
+              </span>
+            </div>
+            <div class="p-6 bg-surface rounded-2xl border border-white/5 glow-blue">
+              <div class="flex items-start justify-between mb-4">
+                <div>
+                  <span class="text-xs font-bold text-primary">REQ-001</span>
+                  <h3 class="text-white font-semibold mt-1 text-sm">Unable to reset my account password</h3>
+                  <div class="flex items-center gap-3 mt-2">
+                    <span class="text-xs text-slate-400"><i class="fa-solid fa-tag mr-1"></i>Technical</span>
+                    <span class="text-xs text-slate-400"><i class="fa-solid fa-calendar mr-1"></i>Jun 16, 2026</span>
+                  </div>
+                </div>
+                <span class="px-3 py-1 rounded-full text-xs font-semibold badge-urgent">Urgent</span>
+              </div>
+
+              <!-- Mini Status Tracker -->
+              <div class="mt-6">
+                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">Request Progress</p>
+                <div class="flex items-center gap-2">
+                  <!-- Step 1 -->
+                  <div class="flex flex-col items-center gap-1">
+                    <div class="w-8 h-8 rounded-full step-done flex items-center justify-center text-xs font-bold">
+                      <i class="fa-solid fa-check text-xs"></i>
+                    </div>
+                    <span class="text-xs text-secondary font-medium text-center" style="width:60px;">Submitted</span>
+                  </div>
+                  <div class="flex-1 h-1 rounded step-line-done"></div>
+                  <!-- Step 2 -->
+                  <div class="flex flex-col items-center gap-1">
+                    <div class="w-8 h-8 rounded-full step-done flex items-center justify-center text-xs font-bold">
+                      <i class="fa-solid fa-check text-xs"></i>
+                    </div>
+                    <span class="text-xs text-secondary font-medium text-center" style="width:60px;">Reviewed</span>
+                  </div>
+                  <div class="flex-1 h-1 rounded step-line-done"></div>
+                  <!-- Step 3 -->
+                  <div class="flex flex-col items-center gap-1">
+                    <div class="w-8 h-8 rounded-full step-active flex items-center justify-center text-xs font-bold">
+                      <i class="fa-solid fa-gear spin-slow text-xs"></i>
+                    </div>
+                    <span class="text-xs text-primary font-semibold text-center" style="width:60px;">Processing</span>
+                  </div>
+                  <div class="flex-1 h-1 rounded step-line-pending"></div>
+                  <!-- Step 4 -->
+                  <div class="flex flex-col items-center gap-1">
+                    <div class="w-8 h-8 rounded-full step-pending border-2 flex items-center justify-center text-xs">4</div>
+                    <span class="text-xs text-slate-500 text-center" style="width:60px;">Response</span>
+                  </div>
+                  <div class="flex-1 h-1 rounded step-line-pending"></div>
+                  <!-- Step 5 -->
+                  <div class="flex flex-col items-center gap-1">
+                    <div class="w-8 h-8 rounded-full step-pending border-2 flex items-center justify-center text-xs">5</div>
+                    <span class="text-xs text-slate-500 text-center" style="width:60px;">Resolved</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-5 pt-4 border-t border-white/5 flex items-center justify-between">
+                <span class="text-xs text-slate-400"><i class="fa-solid fa-message mr-1"></i>2 messages from agent</span>
+                <button onclick="openDetailModal('REQ-001')" class="text-xs font-semibold text-primary hover:text-white transition-colors">View Details <i class="fa-solid fa-arrow-right ml-1"></i></button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Activity -->
+          <div>
+            <h2 class="text-lg font-bold text-white mb-4">Recent Activity</h2>
+            <div class="p-5 bg-surface rounded-2xl border border-white/5 space-y-5">
+              <div class="flex gap-3">
+                <div class="flex flex-col items-center">
+                  <div class="timeline-dot bg-primary"></div>
+                  <div class="flex-1 w-px bg-white/5 mt-1" style="height:36px;"></div>
+                </div>
+                <div>
+                  <p class="text-sm text-white font-medium">Agent replied to REQ-001</p>
+                  <p class="text-xs text-slate-400 mt-0.5">2 hours ago</p>
+                </div>
+              </div>
+              <div class="flex gap-3">
+                <div class="flex flex-col items-center">
+                  <div class="timeline-dot bg-yellow-400"></div>
+                  <div class="flex-1 w-px bg-white/5 mt-1" style="height:36px;"></div>
+                </div>
+                <div>
+                  <p class="text-sm text-white font-medium">REQ-002 status: Open</p>
+                  <p class="text-xs text-slate-400 mt-0.5">1 day ago</p>
+                </div>
+              </div>
+              <div class="flex gap-3">
+                <div class="flex flex-col items-center">
+                  <div class="timeline-dot bg-secondary"></div>
+                  <div class="flex-1 w-px bg-white/5 mt-1" style="height:36px;"></div>
+                </div>
+                <div>
+                  <p class="text-sm text-white font-medium">REQ-003 resolved ✓</p>
+                  <p class="text-xs text-slate-400 mt-0.5">5 days ago</p>
+                </div>
+              </div>
+              <div class="flex gap-3">
+                <div class="flex flex-col items-center">
+                  <div class="timeline-dot bg-violet-400"></div>
+                  <div class="flex-1 w-px bg-white/5 mt-1" style="height:36px;"></div>
+                </div>
+                <div>
+                  <p class="text-sm text-white font-medium">REQ-002 submitted</p>
+                  <p class="text-xs text-slate-400 mt-0.5">Jun 15, 2026</p>
+                </div>
+              </div>
+              <div class="flex gap-3">
+                <div class="flex flex-col items-center">
+                  <div class="timeline-dot bg-primary"></div>
+                </div>
+                <div>
+                  <p class="text-sm text-white font-medium">REQ-001 submitted</p>
+                  <p class="text-xs text-slate-400 mt-0.5">Jun 16, 2026</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div>
+          <h2 class="text-lg font-bold text-white mb-4">Quick Actions</h2>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="quick-action" onclick="switchSection('submit-request')">
+              <div class="w-12 h-12 rounded-2xl bg-primary/15 flex items-center justify-center mx-auto mb-3">
+                <i class="fa-solid fa-plus text-primary text-xl"></i>
+              </div>
+              <h3 class="text-white font-semibold text-sm mb-1">Submit New Request</h3>
+              <p class="text-slate-400 text-xs">Create a new support ticket</p>
+            </div>
+            <div class="quick-action" onclick="switchSection('my-requests')">
+              <div class="w-12 h-12 rounded-2xl bg-secondary/15 flex items-center justify-center mx-auto mb-3">
+                <i class="fa-solid fa-magnifying-glass text-secondary text-xl"></i>
+              </div>
+              <h3 class="text-white font-semibold text-sm mb-1">Track Request</h3>
+              <p class="text-slate-400 text-xs">Check the status of your tickets</p>
+            </div>
+            <div class="quick-action" onclick="switchSection('feedback')">
+              <div class="w-12 h-12 rounded-2xl bg-yellow-400/15 flex items-center justify-center mx-auto mb-3">
+                <i class="fa-solid fa-star text-yellow-400 text-xl"></i>
+              </div>
+              <h3 class="text-white font-semibold text-sm mb-1">Give Feedback</h3>
+              <p class="text-slate-400 text-xs">Rate your support experience</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════════ SECTION 2: SUBMIT REQUEST ════════ -->
+      <section id="section-submit-request" class="section fade-in">
+        <div class="max-w-3xl mx-auto">
+          <div class="mb-8">
+            <h1 class="text-2xl font-bold text-white">Submit a New Service Request</h1>
+            <p class="text-slate-400 text-sm mt-1">Fill in the details below and our team will get back to you promptly.</p>
+          </div>
+
+          <div class="bg-surface rounded-2xl border border-white/5 p-8">
+            <form id="request-form" onsubmit="submitRequest(event)" novalidate>
+
+              <!-- Subject -->
+              <div class="mb-6">
+                <label class="block text-sm font-semibold text-slate-300 mb-2">Subject <span class="text-red-400">*</span></label>
+                <input id="req-subject" type="text" class="form-input" placeholder="Brief description of your issue..." />
+                <p id="err-subject" class="text-red-400 text-xs mt-1 hidden"><i class="fa-solid fa-circle-exclamation mr-1"></i>Subject is required.</p>
+              </div>
+
+              <!-- Category -->
+              <div class="mb-6">
+                <label class="block text-sm font-semibold text-slate-300 mb-2">Category <span class="text-red-400">*</span></label>
+                <select id="req-category" class="form-input">
+                  <option value="">— Select a category —</option>
+                  <option value="Technical Support">Technical Support</option>
+                  <option value="Billing">Billing</option>
+                  <option value="Account Management">Account Management</option>
+                  <option value="Feature Request">Feature Request</option>
+                  <option value="Other">Other</option>
+                </select>
+                <p id="err-category" class="text-red-400 text-xs mt-1 hidden"><i class="fa-solid fa-circle-exclamation mr-1"></i>Please select a category.</p>
+              </div>
+
+              <!-- Priority -->
+              <div class="mb-6">
+                <label class="block text-sm font-semibold text-slate-300 mb-3">Priority <span class="text-red-400">*</span></label>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div class="priority-radio">
+                    <input type="radio" id="pri-low" name="priority" value="Low"/>
+                    <label for="pri-low"><span class="w-2 h-2 rounded-full bg-slate-400 inline-block"></span>Low</label>
+                  </div>
+                  <div class="priority-radio">
+                    <input type="radio" id="pri-medium" name="priority" value="Medium" checked/>
+                    <label for="pri-medium"><span class="w-2 h-2 rounded-full bg-primary inline-block"></span>Medium</label>
+                  </div>
+                  <div class="priority-radio">
+                    <input type="radio" id="pri-high" name="priority" value="High"/>
+                    <label for="pri-high"><span class="w-2 h-2 rounded-full bg-yellow-400 inline-block"></span>High</label>
+                  </div>
+                  <div class="priority-radio">
+                    <input type="radio" id="pri-urgent" name="priority" value="Urgent"/>
+                    <label for="pri-urgent"><span class="w-2 h-2 rounded-full bg-red-400 inline-block"></span>Urgent</label>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Description -->
+              <div class="mb-6">
+                <label class="block text-sm font-semibold text-slate-300 mb-2">Description <span class="text-red-400">*</span></label>
+                <textarea id="req-desc" class="form-input resize-none" rows="5" maxlength="1000" placeholder="Please describe your issue in detail. Include any error messages, steps to reproduce, or relevant information..." oninput="updateCharCount()"></textarea>
+                <div class="flex items-center justify-between mt-1">
+                  <p id="err-desc" class="text-red-400 text-xs hidden"><i class="fa-solid fa-circle-exclamation mr-1"></i>Description is required.</p>
+                  <span class="text-xs text-slate-500 ml-auto"><span id="char-count">0</span>/1000</span>
+                </div>
+              </div>
+
+              <!-- Attachment Drop Zone -->
+              <div class="mb-6">
+                <label class="block text-sm font-semibold text-slate-300 mb-2">Attachments</label>
+                <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()"
+                  ondragover="event.preventDefault(); this.classList.add('drag-over')"
+                  ondragleave="this.classList.remove('drag-over')"
+                  ondrop="handleDrop(event)">
+                  <i class="fa-solid fa-cloud-arrow-up text-3xl text-primary/50 mb-3"></i>
+                  <p class="text-slate-300 font-medium text-sm">Drop files here or click to browse</p>
+                  <p class="text-slate-500 text-xs mt-1">Supports: PDF, DOC, PNG, JPG, ZIP (max 10MB each)</p>
+                  <div id="file-list" class="mt-3 space-y-1"></div>
+                </div>
+                <input type="file" id="file-input" class="hidden" multiple onchange="showFiles(this.files)"/>
+              </div>
+
+              <!-- Company + Contact Preference -->
+              <div class="grid sm:grid-cols-2 gap-6 mb-6">
+                <div>
+                  <label class="block text-sm font-semibold text-slate-300 mb-2">Company</label>
+                  <input type="text" class="form-input" value="TechCorp Inc" readonly/>
+                </div>
+                <div>
+                  <label class="block text-sm font-semibold text-slate-300 mb-2">Contact Preference</label>
+                  <select id="req-contact" class="form-input">
+                    <option value="Email">Email</option>
+                    <option value="Phone">Phone</option>
+                    <option value="Chat">Chat</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Submit -->
+              <div class="flex items-center gap-4 pt-2">
+                <button type="submit" id="submit-btn" class="btn-primary">
+                  <i class="fa-solid fa-paper-plane text-sm"></i>
+                  Submit Request
+                </button>
+                <button type="button" onclick="resetForm()" class="px-6 py-3 rounded-xl border border-white/10 text-slate-400 hover:text-white hover:border-white/30 transition-all text-sm font-medium">
+                  <i class="fa-solid fa-rotate-left mr-2"></i>Reset
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════════ SECTION 3: MY REQUESTS ════════ -->
+      <section id="section-my-requests" class="section fade-in">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h1 class="text-2xl font-bold text-white">My Service Requests</h1>
+            <p class="text-slate-400 text-sm mt-1">View and manage all your submitted support requests.</p>
+          </div>
+          <button onclick="switchSection('submit-request')" class="btn-primary text-sm">
+            <i class="fa-solid fa-plus text-xs"></i>New Request
+          </button>
+        </div>
+
+        <!-- Filters -->
+        <div class="flex flex-col sm:flex-row gap-4 mb-6">
+          <div class="flex gap-2 flex-wrap">
+            <button class="filter-pill active" data-filter="all" onclick="filterRequests('all', this)">All</button>
+            <button class="filter-pill" data-filter="Open" onclick="filterRequests('Open', this)">Open</button>
+            <button class="filter-pill" data-filter="In Progress" onclick="filterRequests('In Progress', this)">In Progress</button>
+            <button class="filter-pill" data-filter="Resolved" onclick="filterRequests('Resolved', this)">Resolved</button>
+          </div>
+          <div class="relative ml-auto">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+            <input type="text" class="search-input w-56" placeholder="Search requests..." oninput="searchRequests(this.value)" id="search-input"/>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="bg-surface rounded-2xl border border-white/5 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="data-table" id="requests-table">
+              <thead>
+                <tr>
+                  <th>Request ID</th>
+                  <th>Subject</th>
+                  <th>Category</th>
+                  <th>Priority</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="requests-tbody">
+                <!-- Rendered by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════════ SECTION 4: FEEDBACK ════════ -->
+      <section id="section-feedback" class="section fade-in">
+        <div class="mb-8">
+          <h1 class="text-2xl font-bold text-white">Share Your Feedback</h1>
+          <p class="text-slate-400 text-sm mt-1">Help us improve by rating your resolved support experiences.</p>
+        </div>
+
+        <div class="grid lg:grid-cols-5 gap-6">
+          <!-- Feedback Form -->
+          <div class="lg:col-span-3">
+            <div id="feedback-form-wrapper" class="bg-surface rounded-2xl border border-white/5 p-8">
+              <div class="flex items-center gap-3 mb-6 p-4 rounded-xl bg-surface-2 border border-white/5">
+                <div class="w-10 h-10 rounded-xl bg-secondary/15 flex items-center justify-center">
+                  <i class="fa-solid fa-circle-check text-secondary"></i>
+                </div>
+                <div>
+                  <p class="text-xs font-semibold text-secondary">Resolved Request</p>
+                  <p class="text-sm text-white font-semibold">REQ-003: Integration with Salesforce not syncing</p>
+                </div>
+              </div>
+
+              <h3 class="text-lg font-bold text-white mb-6">Rate Your Experience</h3>
+
+              <!-- Overall -->
+              <div class="mb-6">
+                <label class="block text-sm font-semibold text-slate-300 mb-3">Overall Experience</label>
+                <div class="flex gap-1" id="stars-overall" data-group="overall">
+                  <span class="star" data-val="1" onclick="setRating('overall',1)">★</span>
+                  <span class="star" data-val="2" onclick="setRating('overall',2)">★</span>
+                  <span class="star" data-val="3" onclick="setRating('overall',3)">★</span>
+                  <span class="star" data-val="4" onclick="setRating('overall',4)">★</span>
+                  <span class="star" data-val="5" onclick="setRating('overall',5)">★</span>
+                </div>
+              </div>
+
+              <!-- Response Time -->
+              <div class="mb-6">
+                <label class="block text-sm font-semibold text-slate-300 mb-3">Response Time</label>
+                <div class="flex gap-1" id="stars-response">
+                  <span class="star" data-val="1" onclick="setRating('response',1)">★</span>
+                  <span class="star" data-val="2" onclick="setRating('response',2)">★</span>
+                  <span class="star" data-val="3" onclick="setRating('response',3)">★</span>
+                  <span class="star" data-val="4" onclick="setRating('response',4)">★</span>
+                  <span class="star" data-val="5" onclick="setRating('response',5)">★</span>
+                </div>
+              </div>
+
+              <!-- Solution Quality -->
+              <div class="mb-6">
+                <label class="block text-sm font-semibold text-slate-300 mb-3">Solution Quality</label>
+                <div class="flex gap-1" id="stars-quality">
+                  <span class="star" data-val="1" onclick="setRating('quality',1)">★</span>
+                  <span class="star" data-val="2" onclick="setRating('quality',2)">★</span>
+                  <span class="star" data-val="3" onclick="setRating('quality',3)">★</span>
+                  <span class="star" data-val="4" onclick="setRating('quality',4)">★</span>
+                  <span class="star" data-val="5" onclick="setRating('quality',5)">★</span>
+                </div>
+              </div>
+
+              <!-- Comments -->
+              <div class="mb-6">
+                <label class="block text-sm font-semibold text-slate-300 mb-2">How did we do?</label>
+                <textarea id="feedback-comment" class="form-input resize-none" rows="4" placeholder="Share your thoughts about the support experience..."></textarea>
+              </div>
+
+              <!-- Recommend -->
+              <div class="mb-8">
+                <label class="block text-sm font-semibold text-slate-300 mb-3">Would you recommend us?</label>
+                <div class="flex gap-3">
+                  <button class="recommend-btn" onclick="selectRecommend(this, 'yes')"><i class="fa-solid fa-thumbs-up mr-2"></i>Yes</button>
+                  <button class="recommend-btn" onclick="selectRecommend(this, 'maybe')"><i class="fa-solid fa-meh mr-2"></i>Maybe</button>
+                  <button class="recommend-btn" onclick="selectRecommend(this, 'no')"><i class="fa-solid fa-thumbs-down mr-2"></i>No</button>
+                </div>
+              </div>
+
+              <button onclick="submitFeedback()" class="btn-primary w-full justify-center">
+                <i class="fa-solid fa-paper-plane text-sm"></i>Submit Feedback
+              </button>
+            </div>
+
+            <!-- Thank You Message -->
+            <div id="feedback-thankyou" class="bg-surface rounded-2xl border border-secondary/30 p-8 text-center hidden thankyou-anim">
+              <div class="w-20 h-20 rounded-full bg-secondary/20 flex items-center justify-center mx-auto mb-4">
+                <i class="fa-solid fa-heart text-secondary text-3xl"></i>
+              </div>
+              <h3 class="text-2xl font-bold text-white mb-2">Thank You! 🎉</h3>
+              <p class="text-slate-400 text-sm leading-relaxed">Your feedback has been submitted successfully. It helps us improve our service for everyone.</p>
+              <button onclick="resetFeedback()" class="mt-6 px-6 py-3 rounded-xl bg-primary/15 text-primary border border-primary/30 text-sm font-semibold hover:bg-primary/25 transition-all">Submit Another Feedback</button>
+            </div>
+          </div>
+
+          <!-- Feedback History -->
+          <div class="lg:col-span-2">
+            <h2 class="text-lg font-bold text-white mb-4">Feedback History</h2>
+            <div id="feedback-history" class="space-y-4">
+              <!-- Populated by JS -->
+              <div class="text-center py-8 text-slate-500 text-sm">
+                <i class="fa-solid fa-star text-2xl mb-3 block text-slate-600"></i>
+                No feedback submitted yet.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════════ SECTION 5: PROFILE ════════ -->
+      <section id="section-profile" class="section fade-in">
+        <div class="mb-8">
+          <h1 class="text-2xl font-bold text-white">My Profile</h1>
+          <p class="text-slate-400 text-sm mt-1">Manage your account information and preferences.</p>
+        </div>
+
+        <div class="grid lg:grid-cols-3 gap-6">
+          <!-- Profile Card -->
+          <div class="lg:col-span-2 space-y-6">
+            <!-- User Info -->
+            <div class="bg-surface rounded-2xl border border-white/5 p-8">
+              <div class="flex items-center gap-5 mb-8">
+                <div class="profile-avatar">SM</div>
+                <div>
+                  <h2 class="text-xl font-bold text-white">Sarah Mitchell</h2>
+                  <p class="text-slate-400 text-sm">TechCorp Inc · Premium Plan</p>
+                  <span class="inline-flex items-center gap-1.5 mt-2 px-3 py-1 rounded-full bg-secondary/15 text-secondary text-xs font-semibold border border-secondary/25">
+                    <i class="fa-solid fa-circle-check text-xs"></i>Verified Customer
+                  </span>
+                </div>
+              </div>
+
+              <div class="grid sm:grid-cols-2 gap-6">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Full Name</label>
+                  <input type="text" class="form-input" value="Sarah Mitchell" id="prof-name"/>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Email Address</label>
+                  <input type="email" class="form-input" value="sarah.mitchell@techcorp.com" id="prof-email"/>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Phone Number</label>
+                  <input type="tel" class="form-input" value="+1 (555) 234-5678" id="prof-phone"/>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Company</label>
+                  <input type="text" class="form-input" value="TechCorp Inc" id="prof-company"/>
+                </div>
+              </div>
+
+              <button onclick="saveProfile()" class="btn-primary mt-6">
+                <i class="fa-solid fa-floppy-disk text-sm"></i>Save Changes
+              </button>
+            </div>
+
+            <!-- Change Password -->
+            <div class="bg-surface rounded-2xl border border-white/5 p-8">
+              <h3 class="text-lg font-bold text-white mb-6"><i class="fa-solid fa-lock mr-2 text-primary"></i>Change Password</h3>
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Current Password</label>
+                  <input type="password" class="form-input" placeholder="Enter current password"/>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">New Password</label>
+                  <input type="password" class="form-input" placeholder="Enter new password"/>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Confirm New Password</label>
+                  <input type="password" class="form-input" placeholder="Confirm new password"/>
+                </div>
+              </div>
+              <button onclick="savePassword()" class="mt-6 px-6 py-3 rounded-xl border border-primary/30 text-primary hover:bg-primary/10 transition-all text-sm font-semibold">
+                <i class="fa-solid fa-key mr-2"></i>Update Password
+              </button>
+            </div>
+          </div>
+
+          <!-- Notification Preferences -->
+          <div>
+            <div class="bg-surface rounded-2xl border border-white/5 p-6 sticky top-24">
+              <h3 class="text-lg font-bold text-white mb-6"><i class="fa-solid fa-bell mr-2 text-primary"></i>Notifications</h3>
+              <div class="space-y-5">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm font-semibold text-white">Email Notifications</p>
+                    <p class="text-xs text-slate-400 mt-0.5">Get updates via email</p>
+                  </div>
+                  <label class="toggle"><input type="checkbox" checked/><span class="slider"></span></label>
+                </div>
+                <div class="w-full h-px bg-white/5"></div>
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm font-semibold text-white">Status Updates</p>
+                    <p class="text-xs text-slate-400 mt-0.5">Notify on request changes</p>
+                  </div>
+                  <label class="toggle"><input type="checkbox" checked/><span class="slider"></span></label>
+                </div>
+                <div class="w-full h-px bg-white/5"></div>
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm font-semibold text-white">Agent Replies</p>
+                    <p class="text-xs text-slate-400 mt-0.5">Notify when agent responds</p>
+                  </div>
+                  <label class="toggle"><input type="checkbox" checked/><span class="slider"></span></label>
+                </div>
+                <div class="w-full h-px bg-white/5"></div>
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm font-semibold text-white">Marketing Emails</p>
+                    <p class="text-xs text-slate-400 mt-0.5">Product news & offers</p>
+                  </div>
+                  <label class="toggle"><input type="checkbox"/><span class="slider"></span></label>
+                </div>
+                <div class="w-full h-px bg-white/5"></div>
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm font-semibold text-white">SMS Alerts</p>
+                    <p class="text-xs text-slate-400 mt-0.5">Critical alerts via SMS</p>
+                  </div>
+                  <label class="toggle"><input type="checkbox"/><span class="slider"></span></label>
+                </div>
+              </div>
+              <button onclick="saveNotifPrefs()" class="w-full mt-8 py-3 rounded-xl bg-primary/15 text-primary border border-primary/30 text-sm font-semibold hover:bg-primary/25 transition-all">
+                Save Preferences
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ══════════════════════ REQUEST DETAIL MODAL ══════════════════════ -->
+  <div id="detail-modal" class="modal-overlay" onclick="closeDetailModal(event)">
+    <div class="modal-box p-0">
+      <!-- Modal Header -->
+      <div class="p-6 border-b border-white/5 flex items-start justify-between">
+        <div>
+          <span id="modal-req-id" class="text-xs font-bold text-primary uppercase tracking-wider"></span>
+          <h2 id="modal-subject" class="text-lg font-bold text-white mt-1"></h2>
+          <div class="flex items-center gap-3 mt-2" id="modal-meta"></div>
+        </div>
+        <button onclick="document.getElementById('detail-modal').classList.remove('open')" class="w-9 h-9 rounded-xl bg-surface-2 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all flex-shrink-0 ml-4">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-6">
+        <!-- Status Timeline -->
+        <div>
+          <h3 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Request Timeline</h3>
+          <div id="modal-stepper" class="flex items-start gap-0"></div>
+        </div>
+
+        <!-- Request Details -->
+        <div class="grid sm:grid-cols-3 gap-4 p-4 bg-surface-2 rounded-xl" id="modal-details"></div>
+
+        <!-- Agent Messages -->
+        <div>
+          <h3 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Conversation</h3>
+          <div id="modal-messages" class="space-y-4"></div>
+        </div>
+
+        <!-- Reply -->
+        <div>
+          <h3 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">Add Reply</h3>
+          <textarea id="reply-textarea" class="form-input resize-none" rows="3" placeholder="Type your reply here..."></textarea>
+          <button onclick="sendReply()" class="btn-primary mt-3">
+            <i class="fa-solid fa-paper-plane text-sm"></i>Send Reply
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════ SUCCESS MODAL ══════════════════════ -->
+  <div id="success-modal" class="modal-overlay" onclick="closeSuccessModal(event)">
+    <div class="modal-box max-w-md p-8 text-center">
+      <div class="success-icon w-20 h-20 rounded-full bg-secondary/20 flex items-center justify-center mx-auto mb-5">
+        <i class="fa-solid fa-circle-check text-secondary text-4xl"></i>
+      </div>
+      <h2 class="text-2xl font-bold text-white mb-2">Request Submitted!</h2>
+      <p class="text-slate-400 text-sm mb-4">Your support request has been successfully submitted. Our team will review it shortly.</p>
+      <div class="px-6 py-4 rounded-xl bg-surface-2 border border-primary/20 mb-6">
+        <p class="text-xs text-slate-400 mb-1">Your Request ID</p>
+        <p id="success-req-id" class="text-2xl font-black gradient-text"></p>
+      </div>
+      <p class="text-xs text-slate-500 mb-6">Expected first response within <span class="text-white font-semibold">4 hours</span></p>
+      <div class="flex gap-3">
+        <button onclick="goTrackRequest()" class="btn-primary flex-1 justify-center">
+          <i class="fa-solid fa-magnifying-glass text-sm"></i>Track Request
+        </button>
+        <button onclick="closeSuccessModalBtn()" class="flex-1 py-3 rounded-xl border border-white/10 text-slate-300 hover:text-white hover:border-white/30 transition-all text-sm font-semibold">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════ TOAST ══════════════════════ -->
+  <div id="toast" class="fixed bottom-6 right-6 z-[2000] flex flex-col gap-2 pointer-events-none">
+  </div>
+
+  <!-- ══════════════════════ JAVASCRIPT ══════════════════════ -->
+  <script>
+    // ─── DATA ───
+    const sampleRequests = [
+      { id: 'REQ-001', subject: 'Unable to reset my account password', category: 'Technical', priority: 'Urgent', status: 'In Progress', date: '2026-06-16', lastUpdate: '2 hours ago', messages: 2 },
+      { id: 'REQ-002', subject: 'Request for additional user licenses', category: 'Account', priority: 'Medium', status: 'Open', date: '2026-06-15', lastUpdate: '1 day ago', messages: 0 },
+      { id: 'REQ-003', subject: 'Integration with Salesforce not syncing', category: 'Technical', priority: 'High', status: 'Resolved', date: '2026-06-10', lastUpdate: '5 days ago', messages: 5 }
+    ];
+
+    const agentMessages = {
+      'REQ-001': [
+        { sender: 'agent', name: 'Alex Thompson', time: '4 hours ago', text: 'Hello Sarah! Thank you for reaching out. I\'m looking into your password reset issue right now. Could you please confirm if you\'ve tried using the \'Forgot Password\' link on the login page?' },
+        { sender: 'user', name: 'Sarah Mitchell', time: '3 hours ago', text: 'Yes, I tried the forgot password link but I\'m not receiving the reset email. I\'ve checked my spam folder too.' },
+        { sender: 'agent', name: 'Alex Thompson', time: '2 hours ago', text: 'Got it! I\'ve checked your account and noticed your email might be bouncing. I\'m escalating this to our technical team and they will resolve it within 2 hours. Apologies for the inconvenience!' }
+      ],
+      'REQ-003': [
+        { sender: 'agent', name: 'Maria Garcia', time: '5 days ago', text: 'Hi Sarah! I\'ve investigated the Salesforce integration sync issue. It was caused by an outdated API key. I\'ve refreshed the integration credentials on our end.' },
+        { sender: 'user', name: 'Sarah Mitchell', time: '5 days ago', text: 'That fixed it! The sync is working now. Thank you so much!' },
+        { sender: 'agent', name: 'Maria Garcia', time: '5 days ago', text: 'Wonderful! I\'ll mark this as resolved. Please don\'t hesitate to reach out if you need any further assistance.' }
+      ]
+    };
+
+    // ─── STATE ───
+    let requests = [];
+    let currentFilter = 'all';
+    let currentSearch = '';
+    let ratings = { overall: 0, response: 0, quality: 0 };
+    let recommendChoice = null;
+    let feedbackHistory = [];
+
+    // ─── LOCALSTORAGE ───
+    function loadData() {
+      const saved = localStorage.getItem('nexusCRM_requests');
+      if (saved) {
+        requests = JSON.parse(saved);
+      } else {
+        requests = [...sampleRequests];
+        saveData();
+      }
+      const savedFeedback = localStorage.getItem('nexusCRM_feedback');
+      if (savedFeedback) feedbackHistory = JSON.parse(savedFeedback);
+    }
+    function saveData() {
+      localStorage.setItem('nexusCRM_requests', JSON.stringify(requests));
+    }
+    function saveFeedbackData() {
+      localStorage.setItem('nexusCRM_feedback', JSON.stringify(feedbackHistory));
+    }
+
+    // ─── SECTION SWITCHING ───
+    function switchSection(name) {
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      const sec = document.getElementById('section-' + name);
+      if (sec) { sec.classList.add('active'); }
+      document.querySelectorAll('.nav-item').forEach(n => {
+        if (n.dataset.section === name) n.classList.add('active');
+      });
+      if (name === 'my-requests') renderRequestsTable();
+      if (name === 'feedback') renderFeedbackHistory();
+      if (name === 'dashboard') updateStats();
+      // scroll to top
+      document.querySelector('main').scrollTop = 0;
+    }
+
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', () => switchSection(item.dataset.section));
+    });
+
+    // ─── STATS ───
+    function updateStats() {
+      const total = requests.length;
+      const open = requests.filter(r => r.status === 'Open' || r.status === 'In Progress').length;
+      const resolved = requests.filter(r => r.status === 'Resolved').length;
+      document.getElementById('stat-total').textContent = total;
+      document.getElementById('stat-open').textContent = open;
+      document.getElementById('stat-resolved').textContent = resolved;
+    }
+
+    // ─── BADGE HELPERS ───
+    function statusBadge(status) {
+      const map = { 'Open': 'badge-open', 'In Progress': 'badge-inprogress', 'Resolved': 'badge-resolved', 'Closed': 'badge-closed' };
+      return `<span class="px-3 py-1 rounded-full text-xs font-semibold ${map[status] || 'badge-closed'}">${status}</span>`;
+    }
+    function priorityBadge(priority) {
+      const map = { 'Urgent': 'badge-urgent', 'High': 'badge-high', 'Medium': 'badge-medium', 'Low': 'badge-low' };
+      return `<span class="px-2 py-0.5 rounded text-xs font-semibold ${map[priority] || 'badge-low'}">${priority}</span>`;
+    }
+
+    // ─── REQUESTS TABLE ───
+    function renderRequestsTable() {
+      let filtered = requests;
+      if (currentFilter !== 'all') filtered = filtered.filter(r => r.status === currentFilter);
+      if (currentSearch) filtered = filtered.filter(r =>
+        r.id.toLowerCase().includes(currentSearch.toLowerCase()) ||
+        r.subject.toLowerCase().includes(currentSearch.toLowerCase()) ||
+        r.category.toLowerCase().includes(currentSearch.toLowerCase())
+      );
+      const tbody = document.getElementById('requests-tbody');
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-10 text-slate-500"><i class="fa-solid fa-inbox text-2xl block mb-2"></i>No requests found.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = filtered.map(r => `
+        <tr>
+          <td><span class="font-bold text-primary">${r.id}</span></td>
+          <td class="max-w-xs">
+            <p class="truncate text-white font-medium" title="${r.subject}">${r.subject}</p>
+            <p class="text-xs text-slate-500 mt-0.5">${r.lastUpdate}</p>
+          </td>
+          <td><span class="text-xs font-medium text-slate-300">${r.category}</span></td>
+          <td>${priorityBadge(r.priority)}</td>
+          <td>${statusBadge(r.status)}</td>
+          <td><span class="text-xs text-slate-400">${r.date}</span></td>
+          <td>
+            <button onclick="openDetailModal('${r.id}')" class="px-3 py-1.5 rounded-lg bg-primary/15 text-primary text-xs font-semibold hover:bg-primary/25 transition-all">
+              <i class="fa-solid fa-eye mr-1"></i>View
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function filterRequests(filter, btn) {
+      currentFilter = filter;
+      document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      renderRequestsTable();
+    }
+    function searchRequests(val) {
+      currentSearch = val;
+      renderRequestsTable();
+    }
+
+    // ─── DETAIL MODAL ───
+    function openDetailModal(reqId) {
+      const req = requests.find(r => r.id === reqId);
+      if (!req) return;
+
+      document.getElementById('modal-req-id').textContent = req.id;
+      document.getElementById('modal-subject').textContent = req.subject;
+      document.getElementById('modal-meta').innerHTML = `
+        ${statusBadge(req.status)}
+        ${priorityBadge(req.priority)}
+        <span class="text-xs text-slate-500"><i class="fa-solid fa-calendar mr-1"></i>${req.date}</span>
+      `;
+
+      // Stepper
+      const steps = [
+        { label: 'Submitted', icon: 'fa-paper-plane' },
+        { label: 'Under Review', icon: 'fa-magnifying-glass' },
+        { label: 'Processing', icon: 'fa-gear' },
+        { label: 'Response Sent', icon: 'fa-reply' },
+        { label: 'Resolved', icon: 'fa-circle-check' }
+      ];
+      const progressMap = { 'Open': 1, 'In Progress': 3, 'Resolved': 5, 'Closed': 5 };
+      const progress = progressMap[req.status] || 1;
+
+      let stepperHtml = '';
+      steps.forEach((step, i) => {
+        const stepNum = i + 1;
+        let circleClass, iconContent;
+        if (stepNum < progress) {
+          circleClass = 'step-done';
+          iconContent = '<i class="fa-solid fa-check text-xs"></i>';
+        } else if (stepNum === progress) {
+          circleClass = 'step-active';
+          iconContent = req.status === 'In Progress' && stepNum === 3
+            ? '<i class="fa-solid fa-gear spin-slow text-xs"></i>'
+            : `<i class="fa-solid ${step.icon} text-xs"></i>`;
+        } else {
+          circleClass = 'step-pending border-2';
+          iconContent = `<i class="fa-solid ${step.icon} text-xs"></i>`;
+        }
+        const lineClass = stepNum < progress ? 'step-line-done' : 'step-line-pending';
+        stepperHtml += `
+          <div class="flex flex-col items-center" style="flex:0 0 auto; width:80px;">
+            <div class="w-10 h-10 rounded-full ${circleClass} flex items-center justify-center mb-2">${iconContent}</div>
+            <span class="text-xs font-medium text-center leading-tight ${stepNum <= progress ? (stepNum < progress ? 'text-secondary' : 'text-white') : 'text-slate-500'}">${step.label}</span>
+          </div>
+          ${i < steps.length - 1 ? `<div class="flex-1 h-1 rounded mt-5 mx-1 ${lineClass}"></div>` : ''}
+        `;
+      });
+      document.getElementById('modal-stepper').innerHTML = stepperHtml;
+
+      // Details
+      document.getElementById('modal-details').innerHTML = `
+        <div><p class="text-xs text-slate-500 mb-1">Category</p><p class="text-sm text-white font-semibold">${req.category}</p></div>
+        <div><p class="text-xs text-slate-500 mb-1">Submitted</p><p class="text-sm text-white font-semibold">${req.date}</p></div>
+        <div><p class="text-xs text-slate-500 mb-1">Last Update</p><p class="text-sm text-white font-semibold">${req.lastUpdate}</p></div>
+      `;
+
+      // Messages
+      const msgs = agentMessages[reqId] || [];
+      const messagesHtml = msgs.length === 0
+        ? `<p class="text-slate-500 text-sm">No messages yet.</p>`
+        : msgs.map(m => `
+          <div class="flex gap-3 ${m.sender === 'user' ? 'flex-row-reverse' : ''}">
+            <div class="w-8 h-8 rounded-full ${m.sender === 'agent' ? 'bg-primary/20' : 'bg-secondary/20'} flex items-center justify-center flex-shrink-0">
+              <span class="text-xs font-bold ${m.sender === 'agent' ? 'text-primary' : 'text-secondary'}">${m.name.split(' ').map(x=>x[0]).join('')}</span>
+            </div>
+            <div class="max-w-sm">
+              <div class="${m.sender === 'agent' ? 'chat-bubble-agent' : 'chat-bubble-user'}">
+                <p class="text-sm text-white leading-relaxed">${m.text}</p>
+              </div>
+              <p class="text-xs text-slate-500 mt-1 ${m.sender === 'user' ? 'text-right' : ''}">${m.name} · ${m.time}</p>
+            </div>
+          </div>
+        `).join('');
+      document.getElementById('modal-messages').innerHTML = messagesHtml;
+      document.getElementById('modal-messages').dataset.reqId = reqId;
+
+      document.getElementById('detail-modal').classList.add('open');
+    }
+    function closeDetailModal(e) {
+      if (e.target === document.getElementById('detail-modal')) {
+        document.getElementById('detail-modal').classList.remove('open');
+      }
+    }
+    function sendReply() {
+      const ta = document.getElementById('reply-textarea');
+      const text = ta.value.trim();
+      if (!text) return;
+      const reqId = document.getElementById('modal-messages').dataset.reqId;
+      if (!agentMessages[reqId]) agentMessages[reqId] = [];
+      agentMessages[reqId].push({ sender: 'user', name: 'Sarah Mitchell', time: 'Just now', text });
+      ta.value = '';
+      openDetailModal(reqId);
+      showToast('Reply sent successfully!', 'success');
+    }
+
+    // ─── SUBMIT REQUEST ───
+    function updateCharCount() {
+      const ta = document.getElementById('req-desc');
+      document.getElementById('char-count').textContent = ta.value.length;
+    }
+
+    function showFiles(files) {
+      const list = document.getElementById('file-list');
+      if (!files || files.length === 0) { list.innerHTML = ''; return; }
+      list.innerHTML = Array.from(files).map(f => `
+        <div class="flex items-center gap-2 p-2 rounded-lg bg-primary/10 border border-primary/20">
+          <i class="fa-solid fa-file text-primary text-xs"></i>
+          <span class="text-xs text-slate-300">${f.name}</span>
+          <span class="text-xs text-slate-500 ml-auto">${(f.size / 1024).toFixed(1)} KB</span>
+        </div>
+      `).join('');
+    }
+
+    function handleDrop(e) {
+      e.preventDefault();
+      document.getElementById('drop-zone').classList.remove('drag-over');
+      showFiles(e.dataTransfer.files);
+    }
+
+    let newReqCounter = 4;
+    function submitRequest(e) {
+      e.preventDefault();
+      const subject = document.getElementById('req-subject').value.trim();
+      const category = document.getElementById('req-category').value;
+      const desc = document.getElementById('req-desc').value.trim();
+      let valid = true;
+
+      ['err-subject', 'err-category', 'err-desc'].forEach(id => document.getElementById(id).classList.add('hidden'));
+
+      if (!subject) { document.getElementById('err-subject').classList.remove('hidden'); valid = false; }
+      if (!category) { document.getElementById('err-category').classList.remove('hidden'); valid = false; }
+      if (!desc) { document.getElementById('err-desc').classList.remove('hidden'); valid = false; }
+      if (!valid) return;
+
+      const btn = document.getElementById('submit-btn');
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-sm"></i> Submitting...';
+      btn.disabled = true;
+
+      setTimeout(() => {
+        const priority = document.querySelector('input[name="priority"]:checked').value;
+        const reqId = 'REQ-' + String(newReqCounter).padStart(3, '0');
+        newReqCounter++;
+        const newReq = {
+          id: reqId, subject, category, priority,
+          status: 'Open',
+          date: new Date().toISOString().slice(0, 10),
+          lastUpdate: 'Just now',
+          messages: 0
+        };
+        requests.unshift(newReq);
+        saveData();
+
+        btn.innerHTML = '<i class="fa-solid fa-paper-plane text-sm"></i> Submit Request';
+        btn.disabled = false;
+
+        // Show success modal
+        document.getElementById('success-req-id').textContent = reqId;
+        document.getElementById('success-modal').classList.add('open');
+        fireConfetti();
+        resetForm();
+      }, 1800);
+    }
+
+    function resetForm() {
+      document.getElementById('request-form').reset();
+      document.getElementById('char-count').textContent = '0';
+      document.getElementById('file-list').innerHTML = '';
+      ['err-subject', 'err-category', 'err-desc'].forEach(id => document.getElementById(id).classList.add('hidden'));
+    }
+
+    function closeSuccessModal(e) {
+      if (e.target === document.getElementById('success-modal')) document.getElementById('success-modal').classList.remove('open');
+    }
+    function closeSuccessModalBtn() {
+      document.getElementById('success-modal').classList.remove('open');
+    }
+    function goTrackRequest() {
+      document.getElementById('success-modal').classList.remove('open');
+      switchSection('my-requests');
+    }
+
+    // ─── CONFETTI ───
+    function fireConfetti() {
+      const count = 200;
+      const defaults = { origin: { y: 0.7 } };
+      function fire(particleRatio, opts) {
+        confetti(Object.assign({}, defaults, opts, { particleCount: Math.floor(count * particleRatio) }));
+      }
+      fire(0.25, { spread: 26, startVelocity: 55, colors: ['#4f7fff', '#00d4aa'] });
+      fire(0.2, { spread: 60, colors: ['#ffffff', '#4f7fff'] });
+      fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8, colors: ['#00d4aa', '#8b5cf6'] });
+      fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 });
+      fire(0.1, { spread: 120, startVelocity: 45, colors: ['#f59e0b', '#ef4444'] });
+    }
+
+    // ─── STAR RATING ───
+    function setRating(group, val) {
+      ratings[group] = val;
+      const container = document.getElementById('stars-' + group);
+      container.querySelectorAll('.star').forEach(s => {
+        s.classList.toggle('filled', parseInt(s.dataset.val) <= val);
+      });
+    }
+
+    function selectRecommend(btn, val) {
+      document.querySelectorAll('.recommend-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      recommendChoice = val;
+    }
+
+    function submitFeedback() {
+      if (!ratings.overall) { showToast('Please rate your overall experience.', 'error'); return; }
+      const comment = document.getElementById('feedback-comment').value.trim();
+      const entry = {
+        id: 'REQ-003',
+        subject: 'Integration with Salesforce not syncing',
+        overall: ratings.overall,
+        response: ratings.response,
+        quality: ratings.quality,
+        comment,
+        recommend: recommendChoice,
+        date: new Date().toLocaleDateString()
+      };
+      feedbackHistory.unshift(entry);
+      saveFeedbackData();
+
+      document.getElementById('feedback-form-wrapper').classList.add('hidden');
+      const ty = document.getElementById('feedback-thankyou');
+      ty.classList.remove('hidden');
+      ty.style.animation = 'none'; ty.offsetHeight; ty.style.animation = '';
+
+      renderFeedbackHistory();
+      showToast('Feedback submitted! Thank you.', 'success');
+    }
+
+    function resetFeedback() {
+      ratings = { overall: 0, response: 0, quality: 0 };
+      recommendChoice = null;
+      ['overall','response','quality'].forEach(g => {
+        document.getElementById('stars-' + g).querySelectorAll('.star').forEach(s => s.classList.remove('filled'));
+      });
+      document.getElementById('feedback-comment').value = '';
+      document.querySelectorAll('.recommend-btn').forEach(b => b.classList.remove('selected'));
+      document.getElementById('feedback-form-wrapper').classList.remove('hidden');
+      document.getElementById('feedback-thankyou').classList.add('hidden');
+    }
+
+    function renderFeedbackHistory() {
+      const hist = document.getElementById('feedback-history');
+      if (feedbackHistory.length === 0) {
+        hist.innerHTML = `<div class="text-center py-8 text-slate-500 text-sm"><i class="fa-solid fa-star text-2xl mb-3 block text-slate-600"></i>No feedback submitted yet.</div>`;
+        return;
+      }
+      hist.innerHTML = feedbackHistory.map(fb => `
+        <div class="p-5 bg-surface rounded-2xl border border-white/5">
+          <div class="flex items-start justify-between mb-3">
+            <div>
+              <span class="text-xs font-bold text-primary">${fb.id}</span>
+              <p class="text-sm text-white font-medium mt-0.5">${fb.subject}</p>
+            </div>
+            <span class="text-xs text-slate-400">${fb.date}</span>
+          </div>
+          <div class="flex gap-1 mb-2">${[1,2,3,4,5].map(i => `<span style="color:${i<=fb.overall?'#f59e0b':'#2d3748'}; font-size:18px;">★</span>`).join('')}</div>
+          ${fb.comment ? `<p class="text-xs text-slate-400 italic">"${fb.comment}"</p>` : ''}
+          ${fb.recommend ? `<span class="mt-2 inline-flex items-center gap-1 text-xs text-secondary"><i class="fa-solid fa-thumbs-up"></i> Recommended: ${fb.recommend}</span>` : ''}
+        </div>
+      `).join('');
+    }
+
+    // ─── PROFILE ───
+    function saveProfile() {
+      showToast('Profile updated successfully!', 'success');
+    }
+    function savePassword() {
+      showToast('Password updated!', 'success');
+    }
+    function saveNotifPrefs() {
+      showToast('Preferences saved!', 'success');
+    }
+
+    // ─── TOAST ───
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      const colorMap = { success: 'border-secondary/40 bg-secondary/10 text-secondary', error: 'border-red-500/40 bg-red-500/10 text-red-400', info: 'border-primary/40 bg-primary/10 text-primary' };
+      const iconMap = { success: 'fa-circle-check', error: 'fa-circle-exclamation', info: 'fa-circle-info' };
+      toast.className = `flex items-center gap-3 px-5 py-3 rounded-xl border pointer-events-auto backdrop-blur ${colorMap[type]} shadow-2xl`;
+      toast.style.cssText = 'animation: fadeInUp 0.3s ease; font-size: 13px; font-weight:500;';
+      toast.innerHTML = `<i class="fa-solid ${iconMap[type]}"></i>${message}`;
+      document.getElementById('toast').appendChild(toast);
+      setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.3s ease'; setTimeout(() => toast.remove(), 300); }, 3500);
+    }
+
+    // ─── NOTIFICATION PANEL ───
+    document.getElementById('notif-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.getElementById('notif-panel').classList.toggle('open');
+    });
+    document.addEventListener('click', () => document.getElementById('notif-panel').classList.remove('open'));
+
+    // ─── INIT ───
+    loadData();
+    renderRequestsTable();
+    renderFeedbackHistory();
+    updateStats();
+  </script>
+</body>
+</html>
