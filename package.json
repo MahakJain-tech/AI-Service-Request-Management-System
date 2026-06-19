@@ -1,0 +1,9 @@
+{
+  "name": "nexuscrm-root",
+  "version": "1.0.0",
+  "description": "NexusCRM Root Forwarder",
+  "scripts": {
+    "start": "npm start --prefix backend",
+    "dev": "npm run dev --prefix backend"
+  }
+}

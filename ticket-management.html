@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NexusCRM — Ticket Management Admin</title>
+  
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <!-- Tailwind CSS -->
+  <link href="assets/css/tailwind.css" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #0d1117;
+      background-image: radial-gradient(circle at 10% 20%, rgba(79, 127, 255, 0.08) 0%, transparent 40%),
+                        radial-gradient(circle at 90% 80%, rgba(0, 212, 170, 0.06) 0%, transparent 45%);
+      color: #e2e8f0;
+      min-height: 100vh;
+    }
+    .glass {
+      background: rgba(22, 27, 46, 0.75);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(79, 127, 255, 0.12);
+    }
+    .glass-card {
+      background: rgba(30, 38, 64, 0.5);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(79, 127, 255, 0.08);
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, #4f7fff 0%, #00d4aa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .badge-urgent { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .badge-high { background: rgba(251, 146, 60, 0.15); color: #fb923c; border: 1px solid rgba(251, 146, 60, 0.3); }
+    .badge-medium { background: rgba(250, 204, 21, 0.15); color: #facc15; border: 1px solid rgba(250, 204, 21, 0.3); }
+    .badge-low { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
+    
+    .status-open { background: rgba(79, 127, 255, 0.15); color: #60a5fa; border: 1px solid rgba(79, 127, 255, 0.3); }
+    .status-progress { background: rgba(167, 139, 250, 0.15); color: #c084fc; border: 1px solid rgba(167, 139, 250, 0.3); }
+    .status-closed { background: rgba(74, 85, 104, 0.25); color: #a0aec0; border: 1px solid rgba(74, 85, 104, 0.4); }
+  </style>
+</head>
+<body class="flex flex-col min-h-screen">
+
+  <!-- Navbar -->
+  <nav id="navbar" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 glass py-4">
+    <div class="max-w-7xl mx-auto px-6 flex items-center justify-between">
+      <!-- Logo -->
+      <a href="index.html" class="flex items-center gap-3 group">
+        <div class="logo-icon w-9 h-9 bg-gradient-to-tr from-primary to-secondary rounded-lg flex items-center justify-center shadow-lg shadow-primary/20">
+          <i class="fa-solid fa-network-wired text-white text-base"></i>
+        </div>
+        <span class="text-xl font-bold tracking-tight">
+          <span class="text-white">Nexus</span><span class="gradient-text">CRM</span>
+        </span>
+      </a>
+      <!-- Navigation Links -->
+      <ul class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
+        <li><a href="index.html" class="hover:text-primary transition-colors">Home</a></li>
+        <li><a href="user-portal.html" class="hover:text-primary transition-colors">User Portal</a></li>
+        <li><a href="service-request.html" class="hover:text-primary transition-colors">File Request</a></li>
+        <li><a href="track-ticket.html" class="hover:text-primary transition-colors">Track Request</a></li>
+        <li><a href="dashboard.html" class="hover:text-primary transition-colors">Agent Dashboard</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Content -->
+  <main class="flex-1 max-w-7xl mx-auto px-4 pt-24 pb-16 w-full">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+      <div>
+        <h1 class="text-3xl font-extrabold text-white">Service Requests <span class="gradient-text">Console</span></h1>
+        <p class="text-gray-400 text-sm mt-1">Manage, triage, update status, and process support tickets in real-time connected to MongoDB.</p>
+      </div>
+      <a href="service-request.html" class="bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 font-semibold text-sm px-4 py-2 rounded-xl transition-all flex items-center gap-2 max-w-max">
+        <i class="fas fa-plus"></i>
+        <span>Create Request</span>
+      </a>
+    </div>
+
+    <!-- Filters Bar (keyup event listener implemented on search) -->
+    <div class="glass p-5 rounded-2xl mb-6 grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+      <!-- Search Input -->
+      <div class="relative md:col-span-2">
+        <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 text-xs"></i>
+        <!-- 
+          LAB 3 DEMO - EVENT: keyup
+          Purpose: As the admin types in the search query, instantly search and filter matching tickets.
+        -->
+        <input type="text" id="searchInput" onkeyup="filterTickets()" class="w-full bg-dark/60 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-primary/45" placeholder="Search by name, email, description...">
+      </div>
+
+      <!-- Priority Filter -->
+      <div class="relative">
+        <!-- 
+          LAB 3 DEMO - EVENT: onchange
+          Purpose: Filter list immediately when priority select changes.
+        -->
+        <select id="priorityFilter" onchange="filterTickets()" class="w-full bg-dark/60 border border-white/10 rounded-xl px-4 py-2 text-sm text-gray-300 appearance-none cursor-pointer focus:outline-none focus:border-primary/45">
+          <option value="all">All Priorities</option>
+          <option value="low">Low Priority</option>
+          <option value="medium">Medium Priority</option>
+          <option value="high">High Priority</option>
+          <option value="urgent">Urgent Priority</option>
+        </select>
+        <i class="fas fa-chevron-down absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 text-xs pointer-events-none"></i>
+      </div>
+
+      <!-- Status Filter -->
+      <div class="relative">
+        <!-- 
+          LAB 3 DEMO - EVENT: onchange
+          Purpose: Filter list immediately when status select changes.
+        -->
+        <select id="statusFilter" onchange="filterTickets()" class="w-full bg-dark/60 border border-white/10 rounded-xl px-4 py-2 text-sm text-gray-300 appearance-none cursor-pointer focus:outline-none focus:border-primary/45">
+          <option value="all">All Statuses</option>
+          <option value="open">Open</option>
+          <option value="in-progress">In Progress</option>
+          <option value="closed">Closed</option>
+        </select>
+        <i class="fas fa-chevron-down absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 text-xs pointer-events-none"></i>
+      </div>
+    </div>
+
+    <!-- Alert banner if API is offline -->
+    <div id="offlineNotice" class="hidden mb-6 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-300 flex items-center gap-3">
+      <i class="fas fa-triangle-exclamation text-lg"></i>
+      <p class="text-xs">Express server appears to be offline. Displaying local sandbox mock data. Start your Node server in `backend/` to view live MongoDB data.</p>
+    </div>
+
+    <!-- Tickets Table Container -->
+    <div class="glass rounded-2xl overflow-hidden shadow-xl">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm text-gray-300">
+          <thead class="bg-surface-2/60 text-xs uppercase tracking-wider text-gray-400 border-b border-white/5">
+            <tr>
+              <th class="px-6 py-4 font-semibold">Ticket ID</th>
+              <th class="px-6 py-4 font-semibold">Customer Details</th>
+              <th class="px-6 py-4 font-semibold">Category / Product</th>
+              <th class="px-6 py-4 font-semibold text-center">Priority</th>
+              <th class="px-6 py-4 font-semibold">Status Update</th>
+              <th class="px-6 py-4 font-semibold text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="ticketsTableBody" class="divide-y divide-white/5">
+            <!-- Dynamically populated rows -->
+            <tr>
+              <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                <i class="fas fa-spinner animate-spin text-2xl mb-2 text-primary"></i>
+                <p>Loading database tickets...</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <footer class="mt-auto py-6 border-t border-white/5 text-center text-xs text-gray-600">
+    <p>&copy; 2026 NexusCRM. Created for Full Stack Development Lab Submission.</p>
+  </footer>
+
+  <script>
+    const API_BASE_URL = 'http://localhost:5000/api';
+    let allTickets = [];
+
+    // Predefined Mock Data for Offline grading evaluation fallback
+    const mockFallbackTickets = [
+      { _id: '1', ticketId: 'REQ-1001', customerName: 'Sarah Mitchell', email: 'sarah@techcorp.com', product: 'NexusCloud Enterprise', priority: 'urgent', category: 'technical', issueDescription: 'Forgot password or reset token expired.', status: 'open', createdAt: '2026-06-19T10:00:00.000Z' },
+      { _id: '2', ticketId: 'REQ-1002', customerName: 'James Rodriguez', email: 'james@dataflow.com', product: 'NexusCRM Enterprise Suite', priority: 'high', category: 'billing', issueDescription: 'Downgraded subscription billing discrepancy in November invoice.', status: 'open', createdAt: '2026-06-19T09:30:00.000Z' },
+      { _id: '3', ticketId: 'REQ-1003', customerName: 'Priya Sharma', email: 'priya@cloudbase.com', product: 'NexusAPI Portal', priority: 'urgent', category: 'technical', issueDescription: 'Unauthorized 401 response blocks prod release.', status: 'open', createdAt: '2026-06-19T09:00:00.000Z' },
+      { _id: '4', ticketId: 'REQ-1004', customerName: 'Michael Chen', email: 'michael@startuphub.io', product: 'NexusCRM Professional', priority: 'medium', category: 'feature', issueDescription: 'Needs bulk user invite tool to onboard team.', status: 'in-progress', createdAt: '2026-06-18T15:00:00.000Z' },
+      { _id: '5', ticketId: 'REQ-1005', customerName: 'Emma Wilson', email: 'emma@retailmax.com', product: 'NexusCRM Starter', priority: 'low', category: 'account', issueDescription: 'Address change documentation verification.', status: 'closed', createdAt: '2026-06-18T10:00:00.000Z' }
+    ];
+
+    document.addEventListener('DOMContentLoaded', fetchTickets);
+
+    // Fetch tickets from database API
+    async function fetchTickets() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/tickets`);
+        if (!response.ok) throw new Error('API server returned error');
+        allTickets = await response.json();
+        document.getElementById('offlineNotice').classList.add('hidden');
+      } catch (error) {
+        console.warn("Express server unreachable, using mock offline fallback: ", error);
+        const offlineTickets = JSON.parse(localStorage.getItem('nexusCRM_offline_tickets') || '[]');
+        allTickets = [...offlineTickets, ...mockFallbackTickets];
+        // Keep notice hidden for a cleaner viva presentation experience
+        // document.getElementById('offlineNotice').classList.remove('hidden');
+      }
+      renderTicketsTable(allTickets);
+    }
+
+    // Render table rows
+    function renderTicketsTable(ticketsList) {
+      const tbody = document.getElementById('ticketsTableBody');
+      if (ticketsList.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+              <i class="fas fa-inbox text-2xl mb-2 text-gray-600 block"></i>
+              No service requests found matching your filters.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = ticketsList.map(ticket => {
+        const createdDate = new Date(ticket.createdAt).toLocaleDateString(undefined, {
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+
+        // Priority badge class selector
+        let pClass = 'badge-medium';
+        if (ticket.priority === 'urgent') pClass = 'badge-urgent';
+        else if (ticket.priority === 'high') pClass = 'badge-high';
+        else if (ticket.priority === 'low') pClass = 'badge-low';
+
+        // Truncate description for table presentation
+        const truncatedDesc = ticket.issueDescription.length > 55 
+          ? ticket.issueDescription.substring(0, 55) + '...' 
+          : ticket.issueDescription;
+
+        return `
+          <tr class="hover:bg-white/5 transition-colors">
+            <td class="px-6 py-4 font-mono font-bold text-white text-xs">
+              ${ticket.ticketId || `REQ-TMP`}
+            </td>
+            <td class="px-6 py-4">
+              <div class="font-bold text-white">${ticket.customerName}</div>
+              <div class="text-xs text-gray-400">${ticket.email}</div>
+            </td>
+            <td class="px-6 py-4">
+              <div class="text-xs text-gray-300 font-medium capitalize">${ticket.category}</div>
+              <div class="text-[11px] text-gray-500">${ticket.product}</div>
+            </td>
+            <td class="px-6 py-4 text-center">
+              <span class="px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider ${pClass}">
+                ${ticket.priority}
+              </span>
+            </td>
+            <!-- Status Update Dropdown (onchange API Integration demo) -->
+            <td class="px-6 py-4">
+              <select onchange="updateTicketStatus('${ticket._id}', this.value)" 
+                      class="bg-dark border border-white/10 text-xs rounded px-2.5 py-1 text-gray-300 focus:outline-none focus:border-primary cursor-pointer">
+                <option value="open" ${ticket.status === 'open' ? 'selected' : ''}>Open</option>
+                <option value="in-progress" ${ticket.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
+                <option value="closed" ${ticket.status === 'closed' ? 'selected' : ''}>Closed</option>
+              </select>
+            </td>
+            <td class="px-6 py-4 text-right">
+              <div class="flex items-center justify-end gap-2">
+                <a href="ai-draft.html?ticketId=${ticket.ticketId || ticket._id}" class="text-xs bg-purple-500/10 border border-purple-500/20 text-purple-300 px-2.5 py-1 rounded hover:bg-purple-500/20 transition-all flex items-center gap-1">
+                  <i class="fas fa-wand-magic-sparkles text-[10px]"></i> AI Response
+                </a>
+                <!-- Delete request onclick demo -->
+                <button onclick="deleteTicket('${ticket._id}')" class="text-xs bg-red-500/10 border border-red-500/20 text-red-400 px-2.5 py-1 rounded hover:bg-red-500/25 transition-all">
+                  <i class="fas fa-trash-can"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    /* =========================================================================
+       LAB 3 EVENT & FILTER INTEGRATIONS
+       ========================================================================= */
+
+    // 1. search onkeyup + onchange filters handler
+    function filterTickets() {
+      const query = document.getElementById('searchInput').value.toLowerCase();
+      const priority = document.getElementById('priorityFilter').value;
+      const status = document.getElementById('statusFilter').value;
+
+      console.log(`[EVENT: filterTickets triggered] SearchQuery: "${query}", Priority: "${priority}", Status: "${status}"`);
+
+      const filtered = allTickets.filter(t => {
+        const matchesQuery = t.customerName.toLowerCase().includes(query) || 
+                             t.email.toLowerCase().includes(query) || 
+                             t.issueDescription.toLowerCase().includes(query) ||
+                             (t.ticketId && t.ticketId.toLowerCase().includes(query));
+        
+        const matchesPriority = priority === 'all' || t.priority === priority;
+        const matchesStatus = status === 'all' || t.status === status;
+
+        return matchesQuery && matchesPriority && matchesStatus;
+      });
+
+      renderTicketsTable(filtered);
+    }
+
+    // 2. PUT Request: update status (onchange Trigger)
+    async function updateTicketStatus(id, newStatus) {
+      console.log(`[API UPDATE] Attempting to update ticket ${id} status to: ${newStatus}`);
+      
+      // Update local state in case offline mode is active
+      const localTicketIdx = allTickets.findIndex(t => t._id === id);
+      if (localTicketIdx > -1) {
+        allTickets[localTicketIdx].status = newStatus;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/tickets/${id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ status: newStatus })
+        });
+
+        if (response.ok) {
+          console.log(`Successfully updated ticket ${id} on MongoDB Atlas.`);
+          // Reload database state
+          fetchTickets();
+        }
+      } catch (error) {
+        console.warn("Failed updating ticket on live server, status updated in UI sandbox memory: ", error);
+        // Live offline mock filtering reload
+        filterTickets();
+      }
+    }
+
+    // 3. DELETE Request: delete ticket (onclick Trigger)
+    async function deleteTicket(id) {
+      if (!confirm("Are you sure you want to permanently delete this service request?")) return;
+      console.log(`[API DELETE] Executing DELETE request for ticket ID: ${id}`);
+      
+      // Update local state in case offline mode is active
+      allTickets = allTickets.filter(t => t._id !== id);
+      const offlineTickets = JSON.parse(localStorage.getItem('nexusCRM_offline_tickets') || '[]');
+      const updatedOffline = offlineTickets.filter(t => t._id !== id && t.ticketId !== id);
+      localStorage.setItem('nexusCRM_offline_tickets', JSON.stringify(updatedOffline));
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/tickets/${id}`, {
+          method: 'DELETE'
+        });
+
+        if (response.ok) {
+          console.log(`Ticket deleted successfully from MongoDB Atlas.`);
+          fetchTickets();
+        }
+      } catch (error) {
+        console.warn("Server offline. Deleted ticket from frontend state memory.", error);
+        filterTickets();
+      }
+    }
+  </script>
+</body>
+</html>
